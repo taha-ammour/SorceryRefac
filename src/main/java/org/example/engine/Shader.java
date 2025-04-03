@@ -2,6 +2,10 @@ package org.example.engine;
 
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
+import org.joml.Matrix4f;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -138,11 +142,61 @@ public class Shader {
     // Convenience methods for setting uniform values
 
     public void setUniform1i(String name, int value) {
-        glUniform1i(getUniformLocation(name), value);
+        int location = getUniformLocation(name);
+        if (location != -1) {
+            glUniform1i(location, value);
+        }
+    }
+    public void setUniform1f(String name, float value) {
+        int location = getUniformLocation(name);
+        if (location != -1) {
+            glUniform1f(location, value);
+        }
     }
 
-    public void setUniform1f(String name, float value) {
-        glUniform1f(getUniformLocation(name), value);
+    public void setInt(String name, int value) {
+        int location = glGetUniformLocation(programId, name);
+        if (location != -1) {
+            glUniform1i(location, value);
+        }
+    }
+
+    public void setFloat(String name, float value) {
+        int location = glGetUniformLocation(programId, name);
+        if (location != -1) {
+            glUniform1f(location, value);
+        }
+    }
+
+    public void setVec2(String name, Vector2f value) {
+        int location = glGetUniformLocation(programId, name);
+        if (location != -1) {
+            glUniform2f(location, value.x, value.y);
+        }
+    }
+
+    public void setVec3(String name, Vector3f value) {
+        int location = glGetUniformLocation(programId, name);
+        if (location != -1) {
+            glUniform3f(location, value.x, value.y, value.z);
+        }
+    }
+
+    public void setVec4(String name, Vector4f value) {
+        int location = glGetUniformLocation(programId, name);
+        if (location != -1) {
+            glUniform4f(location, value.x, value.y, value.z, value.w);
+        }
+    }
+
+    public void setMat4(String name, Matrix4f value) {
+        int location = glGetUniformLocation(programId, name);
+        if (location != -1) {
+            FloatBuffer buffer = FloatBuffer.allocate(16);
+            value.get(buffer);
+            buffer.flip();
+            glUniformMatrix4fv(location, false, buffer);
+        }
     }
 
     /**
@@ -178,6 +232,21 @@ public class Shader {
         }
         return source.toString();
     }
+
+    public static String loadShaderSource1(String path) {
+        StringBuilder source = new StringBuilder();
+        try (InputStream in = Shader.class.getResourceAsStream(path);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                source.append(line).append("\n");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load shader source from " + path, e);
+        }
+        return source.toString();
+    }
+
 
     // (Optional) Utility method for loading a resource into a ByteBuffer.
     private static ByteBuffer ioResourceToByteBuffer(String resource, int bufferSize) throws IOException {

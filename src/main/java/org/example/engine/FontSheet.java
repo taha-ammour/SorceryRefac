@@ -125,7 +125,7 @@ public class FontSheet {
     /**
      * Returns the Sprite for a given character and flags.
      */
-    private Sprite getGlyphSprite(char ch, int flags) {
+    public Sprite getGlyphSprite(char ch, int flags) {
         ch = Character.toUpperCase(ch);
         int row = -1;
         int col = -1;
@@ -334,5 +334,9 @@ public class FontSheet {
 
     public Shader getSpriteShader() {
         return sprite.getShader();
+    }
+
+    public String[] getColorPalette() {
+        return colorPalette;
     }
 }

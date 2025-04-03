@@ -1,10 +1,13 @@
 package org.example.engine;
 
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
+import org.example.ui.*;
+import org.example.ui.UIManagerGameObject;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -20,6 +23,8 @@ public class Engine {
     private Renderer renderer;
     private Camera camera;
     private boolean running = false;
+    private UIManagerGameObject uiGameObject;
+    private org.example.GameWorld gameWorld;
 
     public void init(int width, int height, String title) {
         // Set up error callback
@@ -32,7 +37,7 @@ public class Engine {
 
         // Configure GLFW for OpenGL 3.3 core profile
         glfwDefaultWindowHints();
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
@@ -65,8 +70,21 @@ public class Engine {
         // Create a simple 2D orthographic camera
         camera = new Camera(width, height);
 
+        glfwSetFramebufferSizeCallback(window, (win, newWidth, newHeight) -> {
+            // Update the OpenGL viewport
+            glViewport(0, 0, newWidth, newHeight);
+            // Update the camera's viewport size
+            camera.setViewportSize(newWidth, newHeight);
+            if (uiGameObject != null) {
+                uiGameObject.setWindowSize(newWidth, newHeight);
+            }
+        });
+
         // Initialize renderer
         renderer = new Renderer();
+
+        // Set the initial viewport (in case the window is already a certain size)
+        glViewport(0, 0, width, height);
 
         // Default clear color
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -75,6 +93,10 @@ public class Engine {
 
         // Create default scene (you can swap with setActiveScene later)
         activeScene = new Scene();
+
+        UIManager uiManager = new UIManager();
+        uiGameObject = new UIManagerGameObject(uiManager, width, height);
+        activeScene.addGameObject(uiGameObject);
     }
 
     public void run() {
@@ -101,12 +123,22 @@ public class Engine {
 
             // Update input
             input.update();
+            Sprite.clearGlobalLights();
+
             // Update camera if needed
-            handleCameraMovement(deltaTime);
-            camera.update();
+            if (camera != null && !camera.isFollowing()) {
+                handleCameraMovement(deltaTime);
+            }
+
+            // Inside the main loop, after deltaTime is computed:
 
             // Update scene
             activeScene.update(deltaTime);
+            if (gameWorld != null) {
+                gameWorld.update(deltaTime);
+            }
+
+            camera.update();
 
             // Render
             renderer.clear();
@@ -146,7 +178,9 @@ public class Engine {
     private void handleCameraMovement(float deltaTime) {
         // Pick a speed in "pixels per second"
         float moveSpeed = 200.0f;
-
+        if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT)){
+            moveSpeed += 1250.0f;
+        }
         // WASD or arrow keys for panning:
         if (input.isKeyDown(GLFW_KEY_W) || input.isKeyDown(GLFW_KEY_UP)) {
             camera.move(0, -moveSpeed * deltaTime);
@@ -186,4 +220,14 @@ public class Engine {
         }
     }
 
+    public UIManagerGameObject getUIManagerGameObject() {
+        return uiGameObject;
+    }
+
+    public Input getInput() {
+        return input;
+    }
+    public void setGameWorld(org.example.GameWorld gameWorld) {
+        this.gameWorld = gameWorld;
+    }
 }

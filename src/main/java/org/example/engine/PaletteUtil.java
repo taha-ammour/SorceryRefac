@@ -45,4 +45,23 @@ public class PaletteUtil {
         }
         return palette;
     }
+
+    public static String hexToPaletteCode(String hexColor) {
+        if (hexColor == null || hexColor.length() != 6) {
+            throw new IllegalArgumentException("Hex color must be a 6-character string.");
+        }
+        try {
+            int red = Integer.parseInt(hexColor.substring(0, 2), 16);
+            int green = Integer.parseInt(hexColor.substring(2, 4), 16);
+            int blue = Integer.parseInt(hexColor.substring(4, 6), 16);
+
+            int pr = (int) Math.round((red / 255.0) * 5);
+            int pg = (int) Math.round((green / 255.0) * 5);
+            int pb = (int) Math.round((blue / 255.0) * 5);
+
+            return "" + pr + pg + pb;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid hex color format.", e);
+        }
+    }
 }

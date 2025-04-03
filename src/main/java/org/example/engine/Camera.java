@@ -16,6 +16,15 @@ public class Camera {
     private final Vector3f position;
     private float zoom;
     private float rotation; // in radians
+    private static Vector3f Camcen;
+
+    // Camera following state
+    private boolean isFollowing = false;
+    private Vector3f targetPosition = new Vector3f();
+    private float followLerp = 0.15f; // Increased for faster following
+
+    // Debug flag
+    private boolean debug = false;
 
     /**
      * Creates a camera with the given viewport dimensions.
@@ -26,7 +35,7 @@ public class Camera {
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
         this.position = new Vector3f(0, 0, 0);
-        this.zoom = 1.0f;
+        this.zoom = 0.5f;
         this.rotation = 0.0f;
         projectionMatrix = new Matrix4f().ortho2D(0, viewportWidth, viewportHeight, 0);
         viewMatrix = new Matrix4f();
@@ -38,7 +47,18 @@ public class Camera {
      * Recalculates the view, projection, and view-projection matrices based on the current camera properties.
      */
     public void update() {
-        // Update the projection matrix (orthographic).
+        // Apply follow logic if active
+        if (isFollowing) {
+            updateFollowing();
+        }
+
+        // Clamp zoom to prevent issues
+        if (zoom < 0.1f) {
+            zoom = 0.1f;
+        }
+
+
+        // Update the projection matrix (orthographic)
         projectionMatrix.identity().ortho2D(0, viewportWidth, viewportHeight, 0);
 
         // Build the view matrix:
@@ -52,6 +72,35 @@ public class Camera {
 
         // Multiply projection and view to form the view-projection matrix.
         projectionMatrix.mul(viewMatrix, viewProjectionMatrix);
+
+        // Update camera center for reference
+        Vector3f camCenter = new Vector3f(position)
+                .add(viewportWidth / (2.0f * zoom), viewportHeight / (2.0f * zoom), 0);
+        Camcen = camCenter;
+    }
+
+    /**
+     * Update the following logic - separate from main update for clarity
+     */
+    private void updateFollowing() {
+        float screenHalfWidth = viewportWidth  * zoom;
+        float screenHalfHeight = viewportHeight  * zoom;
+
+        float targetX = ((targetPosition.x) - (screenHalfWidth * zoom))+16;
+        float targetY = ((targetPosition.y) - (screenHalfHeight * zoom))+16;
+
+        if (debug) {
+            System.out.println("Camera follow: target=(" + targetPosition.x + "," + targetPosition.y +
+                    "), desired=(" + targetX + "," + targetY + ")");
+        }
+
+        // Smoothly interpolate to target position
+        position.x += (targetX - position.x*zoom) * followLerp;
+        position.y += (targetY - position.y*zoom) * followLerp;
+    }
+
+    public static Vector3f getCamcenter() {
+        return Camcen;
     }
 
     /**
@@ -61,7 +110,6 @@ public class Camera {
     public Matrix4f getViewProjectionMatrix() {
         return viewProjectionMatrix;
     }
-
 
     /**
      * Returns the current camera position.
@@ -105,8 +153,13 @@ public class Camera {
      */
     public void setZoom(float zoom) {
         if (zoom <= 0) {
-            throw new IllegalArgumentException("Zoom must be greater than zero.");
+            zoom = 0.1f; // Clamp to minimum instead of throwing exception
         }
+
+        if (debug) {
+            System.out.println("Setting zoom: " + zoom);
+        }
+
         this.zoom = zoom;
         update();
     }
@@ -147,7 +200,47 @@ public class Camera {
         return viewportHeight;
     }
 
-    public  Matrix4f getProjectionMatrix(){
+    public Matrix4f getProjectionMatrix() {
         return projectionMatrix;
+    }
+
+    /**
+     * Set camera to follow a target position
+     * @param targetX Target X position
+     * @param targetY Target Y position
+     */
+    public void follow(float targetX, float targetY) {
+        isFollowing = true;
+        targetPosition.set(targetX, targetY, 0);
+
+    }
+
+    /**
+     * Stop following and return to manual control
+     */
+    public void stopFollowing() {
+        isFollowing = false;
+    }
+
+    /**
+     * Check if camera is currently in follow mode
+     */
+    public boolean isFollowing() {
+        return isFollowing;
+    }
+
+    /**
+     * Set the smoothness of camera following
+     * @param lerp Value between 0-1, higher = faster following
+     */
+    public void setFollowSmoothness(float lerp) {
+        this.followLerp = Math.max(0.01f, Math.min(1.0f, lerp));
+    }
+
+    /**
+     * Enable or disable debug output
+     */
+    public void setDebug(boolean debug) {
+        this.debug = debug;
     }
 }
