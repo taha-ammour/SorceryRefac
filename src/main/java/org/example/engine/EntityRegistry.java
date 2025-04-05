@@ -309,64 +309,67 @@ public class EntityRegistry {
                 24, 88, 8, 8, new String[]{"510","300","210","421"});
         spriteManager.defineSprite(207, "fooric_1", "ui",
                 32, 88, 8, 8, new String[]{"510","300","210","421"});
-
-        spriteManager.defineSprite(208, "Xic_1", "ui",
+        spriteManager.defineSprite(208, "fiveic_1", "ui",
                 40, 88, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(209, "Bic_1", "ui",
-                48, 88, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(210, "Mic_1", "ui",
-                56, 88, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(211, "Cic_1", "ui",
-                64, 88, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(212, "Fic_1", "ui",
-                72, 88, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(213, "Eic_1", "ui",
-                80, 88, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(214, "Gic_1", "ui",
-                88, 88, 8, 8, new String[]{"510","300","210","421"});
 
-        spriteManager.defineSprite(215, "Cube_Black_ic_1", "ui",
+
+        spriteManager.defineSprite(209, "Xic_1", "ui",
+                48, 88, 8, 8, new String[]{"510","300","210","421"});
+        spriteManager.defineSprite(210, "Bic_1", "ui",
+                56, 88, 8, 8, new String[]{"510","300","210","421"});
+        spriteManager.defineSprite(211, "Mic_1", "ui",
+                64, 88, 8, 8, new String[]{"510","300","210","421"});
+        spriteManager.defineSprite(212, "Cic_1", "ui",
+                72, 88, 8, 8, new String[]{"510","300","210","421"});
+        spriteManager.defineSprite(213, "Fic_1", "ui",
+                80, 88, 8, 8, new String[]{"510","300","210","421"});
+        spriteManager.defineSprite(214, "Eic_1", "ui",
+                88, 88, 8, 8, new String[]{"510","300","210","421"});
+        spriteManager.defineSprite(215, "Gic_1", "ui",
+                96, 88, 8, 8, new String[]{"510","300","210","421"});
+
+        spriteManager.defineSprite(216, "Cube_Black_ic_1", "ui",
                 0, 80, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(216, "Question_ic_1", "ui",
+        spriteManager.defineSprite(217, "Question_ic_1", "ui",
                 8, 80, 8, 8, new String[]{"510","300","210","421"});
 
-        spriteManager.defineSprite(217, "flame_spell_fil_ic_1", "ui",
+        spriteManager.defineSprite(218, "flame_spell_fil_ic_1", "ui",
                 0, 72, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(218, "flame_spell_ic_1", "ui",
+        spriteManager.defineSprite(219, "flame_spell_ic_1", "ui",
                 8, 72, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(219, "flame_particle_ic_1", "ui",
+        spriteManager.defineSprite(220, "flame_particle_ic_1", "ui",
                 16, 72, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(220, "spread_spell_ic_1", "ui",
+        spriteManager.defineSprite(221, "spread_spell_ic_1", "ui",
                 24, 72, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(221, "type_spell_sp_ic_1", "ui",
+        spriteManager.defineSprite(222, "type_spell_sp_ic_1", "ui",
                 32, 72, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(222, "type_spell_fl_ic_1", "ui",
+        spriteManager.defineSprite(223, "type_spell_fl_ic_1", "ui",
                 40, 72, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(223, "type_spell_pa_ic_1", "ui",
+        spriteManager.defineSprite(224, "type_spell_pa_ic_1", "ui",
                 48, 72, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(224, "type_spell_qt_ic_1", "ui",
+        spriteManager.defineSprite(225, "type_spell_qt_ic_1", "ui",
                 56, 72, 8, 8, new String[]{"510","300","210","421"});
 
-        spriteManager.defineSprite(225, "coin_pickup_1", "ui",
+        spriteManager.defineSprite(226, "coin_pickup_1", "ui",
                 0, 64, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(226, "Question_ic_2", "ui",
+        spriteManager.defineSprite(227, "Question_ic_2", "ui",
                 8, 64, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(227, "flame_spell_fil_minus_ic_1", "ui",
+        spriteManager.defineSprite(228, "flame_spell_fil_minus_ic_1", "ui",
                 16, 64, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(228, "flame_spell_minus_ic_1", "ui",
+        spriteManager.defineSprite(229, "flame_spell_minus_ic_1", "ui",
                 24, 64, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(229, "lock_opened_ic_1", "ui",
+        spriteManager.defineSprite(230, "lock_opened_ic_1", "ui",
                 32, 64, 8, 8, new String[]{"510","300","210","421"});
 
-        spriteManager.defineSprite(230, "plus_ic_1", "ui",
+        spriteManager.defineSprite(231, "plus_ic_1", "ui",
                 0, 56, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(231, "minus_ic_2", "ui",
+        spriteManager.defineSprite(232, "minus_ic_2", "ui",
                 8, 56, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(232, "speed_inc_1", "ui",
+        spriteManager.defineSprite(233, "speed_inc_1", "ui",
                 16, 56, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(233, "speed_dec_1", "ui",
+        spriteManager.defineSprite(234, "speed_dec_1", "ui",
                 24, 56, 8, 8, new String[]{"510","300","210","421"});
-        spriteManager.defineSprite(234, "type_spell_square_ic_1", "ui",
+        spriteManager.defineSprite(235, "type_spell_square_ic_1", "ui",
                 32, 56, 8, 8, new String[]{"510","300","210","421"});
 
 

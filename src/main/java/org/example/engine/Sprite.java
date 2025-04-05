@@ -33,6 +33,8 @@ public class Sprite extends GameObject implements ZOrderProvider  {
     private float scaleX = 1.0f;
     private float scaleY = 1.0f;
     private Material material;
+    private boolean FlipX = false;
+    private boolean FlipY = false;
 
     // Instead of a single light, we use a list of lights.
     private static List<Light> globalLights = new ArrayList<>();
@@ -50,6 +52,10 @@ public class Sprite extends GameObject implements ZOrderProvider  {
     private int u_ViewPosLoc;
     private int u_specularLoc;
     private int u_shininessLoc;
+
+    private static int u_flip_x_Loc;
+    private static int u_flip_y_Loc;
+    private static int u_texCoordsLoc;
 
     // Added: Cache for light uniform locations
     private static boolean uniformLocationsCached = false;
@@ -73,6 +79,22 @@ public class Sprite extends GameObject implements ZOrderProvider  {
     private final Vector3f viewPos = new Vector3f();
 
     private static final Map<String, GeometryData> geometryCache = new HashMap<>();
+
+    public boolean isFlipY() {
+        return FlipY;
+    }
+
+    public void setFlipY(boolean flipY) {
+        FlipY = flipY;
+    }
+
+    public boolean isFlipX() {
+        return FlipX;
+    }
+
+    public void setFlipX(boolean flipX) {
+        FlipX = flipX;
+    }
 
     private static class GeometryData {
         int vaoId, vboId, eboId;
@@ -126,6 +148,10 @@ public class Sprite extends GameObject implements ZOrderProvider  {
         u_ViewPosLoc = shader.getUniformLocation("u_ViewPos");
         u_specularLoc = shader.getUniformLocation("u_Specular");
         u_shininessLoc = shader.getUniformLocation("u_Shininess");
+        u_flip_x_Loc = shader.getUniformLocation("u_flipX");
+        u_flip_y_Loc = shader.getUniformLocation("u_flipY");
+        u_texCoordsLoc = shader.getUniformLocation("u_texCoords");
+
     }
 
     private void cacheUniformLocations() {
@@ -249,6 +275,9 @@ public class Sprite extends GameObject implements ZOrderProvider  {
         glUniform3f(u_specularLoc, material.getSpecular().x, material.getSpecular().y, material.getSpecular().z);
         glUniform1f(u_shininessLoc, material.getShininess());
         glUniform3f(u_ViewPosLoc, viewPos.x, viewPos.y, viewPos.z);
+        glUniform1i(u_flip_x_Loc, FlipX? 1:0);
+        glUniform1i(u_flip_y_Loc, FlipY? 1:0);
+        glUniform4f(u_texCoordsLoc, u0, v0, u1, v1);
 
         // Update lighting uniforms by iterating over all global lights - OPTIMIZED VERSION
         int lightIndex = 0;

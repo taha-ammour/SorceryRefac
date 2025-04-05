@@ -28,6 +28,7 @@ public class Player extends GameObject {
     private int health = 100;
     private int energy = 100;
     private int armor = 1;
+    private boolean facingLeft = false;
 
     private boolean isAlive = true;
 
@@ -258,9 +259,17 @@ public class Player extends GameObject {
         currentDirection = direction;
         isMoving = true;
 
+        if (direction == Direction.LEFT) {
+            facingLeft = true;
+        } else if (direction == Direction.RIGHT) {
+            facingLeft = false;
+        }
+
         // Use player-specific sprite for direction
         String directionSprite = getDirectionSprite(direction);
         character.setDirection(directionSprite);
+
+        character.setFlipX(facingLeft);
 
         // Move the player
         float distance = moveSpeed * deltaTime;

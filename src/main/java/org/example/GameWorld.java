@@ -110,7 +110,7 @@ public class GameWorld {
         if (debug) System.out.println("Drawing " + registeredSpriteNames.size() + " sprites");
 
         // Try to get sprites by ID first
-        for (int i = 1; i < 235; i++) {
+        for (int i = 1; i <= 235; i++) {
             try {
                 Sprite sprite = spriteManager.getSprite(i);
                 if (sprite != null) {

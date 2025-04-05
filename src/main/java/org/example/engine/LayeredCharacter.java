@@ -188,6 +188,24 @@ public class LayeredCharacter extends GameObject implements ZOrderProvider {
         return z;
     }
 
+    public void setFlipX(boolean flip) {
+        // Apply flip to all layers
+        for (Layer layer : layers) {
+            if (layer.cachedSprite != null) {
+                layer.cachedSprite.setFlipX(flip);
+            }
+        }
+    }
+
+    public void setFlipY(boolean flip) {
+        // Apply flip to all layers
+        for (Layer layer : layers) {
+            if (layer.cachedSprite != null) {
+                layer.cachedSprite.setFlipY(flip);
+            }
+        }
+    }
+
     // Get the character's current scale
     public float getScaleX() {
         return scaleX;
