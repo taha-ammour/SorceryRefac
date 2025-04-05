@@ -3,6 +3,9 @@ package org.example;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Server;
 import org.example.engine.*;
+import org.example.engine.ecs.ECSManager;
+import org.example.engine.ecs.systems.AudioSystem;
+import org.example.engine.ecs.systems.OpenALAudioEngine;
 import org.example.game.Player;
 import org.example.ui.UIManagerGameObject;
 import org.example.ui.*;
@@ -16,6 +19,107 @@ public class Main {
     // Enable debug mode globally
     private static final boolean DEBUG_MODE = true;
 
+    private static void testAudio() {
+        System.out.println("=== Audio Test ===");
+
+        // Initialize OpenAL audio engine
+        OpenALAudioEngine audioEngine = new OpenALAudioEngine();
+        AudioSystem audioSystem = new AudioSystem(audioEngine);
+        ECSManager.getInstance().addSystem(audioSystem);
+        try {
+            // Load sound files (make sure these files exist in your resources folder)
+            audioEngine.loadSound("beep", "/sounds/aoe_cast.wav");
+            audioEngine.loadSound("explosion", "/sounds/boost_cast.wav");
+            audioEngine.loadSound("music", "/sounds/pickup_item.wav");
+
+            System.out.println("Sounds loaded successfully");
+
+            // Play a non-positional sound (UI sound)
+            int beepId = audioEngine.playSound(
+                    "beep",
+                    0, 0, 0,  // position doesn't matter for non-3D sounds
+                    0.5f,     // volume at 50%
+                    1.0f,     // normal pitch
+                    false,    // not looping
+                    false,    // not 3D
+                    1.0f, 10.0f // min/max distance (not used for 2D sounds)
+            );
+
+            System.out.println("Playing beep sound (non-positional)");
+
+            // Wait for beep to finish
+            Thread.sleep(1000);
+
+            // Play 3D sounds at different positions
+            System.out.println("Playing explosion sounds at different positions (3D)");
+
+            // Left position explosion
+            int explosionLeftId = audioEngine.playSound(
+                    "explosion",
+                    -5.0f, 0, 0,  // left position
+                    0.8f,         // volume at 80%
+                    0.9f,         // slightly lower pitch
+                    false,        // not looping
+                    true,         // 3D positioned
+                    1.0f, 20.0f   // audible from 1-20 units away
+            );
+
+            Thread.sleep(500);
+
+            // Right position explosion
+            int explosionRightId = audioEngine.playSound(
+                    "explosion",
+                    5.0f, 0, 0,   // right position
+                    0.8f,         // volume at 80%
+                    1.1f,         // slightly higher pitch
+                    false,        // not looping
+                    true,         // 3D positioned
+                    1.0f, 20.0f   // audible from 1-20 units away
+            );
+
+            Thread.sleep(1000);
+
+            // Play background music (looping)
+            int musicId = audioEngine.playSound(
+                    "music",
+                    0, 0, 0,      // position (doesn't matter for non-3D)
+                    0.3f,         // low volume (background music)
+                    1.0f,         // normal pitch
+                    true,         // looping
+                    false,        // not 3D
+                    1.0f, 10.0f   // min/max distance (not used for 2D)
+            );
+
+            System.out.println("Playing background music (looping)");
+
+            // Move listener around to test 3D audio
+            System.out.println("Moving listener to demonstrate 3D sound positioning...");
+
+            for (int i = 0; i < 10; i++) {
+                // Move from left to right and back
+                float x = (float)Math.sin(i * 0.6) * 10;
+                audioEngine.setListenerPosition(x, 0, 0);
+                System.out.println("Listener at position: " + x);
+                Thread.sleep(500);
+            }
+
+            // Stop the music
+            audioEngine.stopSound(musicId);
+            System.out.println("Stopped background music");
+
+            // Wait a bit more to let other sounds finish
+            Thread.sleep(1000);
+
+        } catch (Exception e) {
+            System.err.println("Error in audio test: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            // Clean up audio system
+            audioEngine.cleanup();
+            System.out.println("Audio test complete");
+        }
+    }
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
@@ -23,6 +127,7 @@ public class Main {
         System.out.println("1. Run Game Engine");
         System.out.println("2. Game Lobby System");
         System.out.println("3. Debug Mode");
+        System.out.println("4. Test Audio");
         System.out.print("Select option (1, 2 or 3): ");
         int option = scanner.nextInt();
         scanner.nextLine(); // consume newline
@@ -33,7 +138,11 @@ public class Main {
 //            runLobbySystem(scanner);
         } else if (option == 3) {
             runDebugMode(scanner);
-        } else {
+        }
+        else if (option == 4) {
+            testAudio();  // Run our new audio test
+        }
+        else {
             System.out.println("Invalid option. Exiting.");
         }
 
