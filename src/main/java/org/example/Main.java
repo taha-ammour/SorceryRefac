@@ -196,6 +196,7 @@ public class Main {
             System.out.println("Drawing all registered sprites for debugging");
             gameWorld.drawAllRegisteredSprites();
         }
+        gameWorld.createTerrain(scene, spriteManager);
 
         // Set up multiplayer if selected
         if (gameMode == 2) {
@@ -283,9 +284,9 @@ public class Main {
 
     private static void createTerrain(Scene scene, SpriteManager spriteManager) {
         // Create a grid of floor tiles
-        int tileSize = 32; // Set a larger tile size (original was 16)
-        int gridWidth = 20;
-        int gridHeight = 20;
+        int tileSize = 16;
+        int gridWidth = 2;
+        int gridHeight = 2;
 
         for (int y = 0; y < gridHeight; y++) {
             for (int x = 0; x < gridWidth; x++) {

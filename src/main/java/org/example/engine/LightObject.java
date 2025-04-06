@@ -22,9 +22,7 @@ public class LightObject extends GameObject {
 
         }
 
-        // For a single light, create a list with this light and update the global lights.
         Sprite.addGlobalLight(light);
-        System.out.println("Added light type: " + light.getType() + ", position: " + light.getPosition());
 
     }
 

@@ -89,10 +89,6 @@ public class Camera {
         float targetX = ((targetPosition.x) - (screenHalfWidth * zoom))+16;
         float targetY = ((targetPosition.y) - (screenHalfHeight * zoom))+16;
 
-        if (debug) {
-            System.out.println("Camera follow: target=(" + targetPosition.x + "," + targetPosition.y +
-                    "), desired=(" + targetX + "," + targetY + ")");
-        }
 
         // Smoothly interpolate to target position
         position.x += (targetX - position.x*zoom) * followLerp;

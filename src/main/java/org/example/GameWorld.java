@@ -10,6 +10,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static java.lang.Math.abs;
+
 /**
  * Main game world class that manages players, game state, networking, and scene management
  */
@@ -42,10 +44,11 @@ public class GameWorld {
 
     /**
      * Create a new game world
-     * @param gameScene The scene to add game objects to
+     *
+     * @param gameScene     The scene to add game objects to
      * @param spriteManager The sprite manager for creating game entities
-     * @param input The input handler
-     * @param camera The game camera
+     * @param input         The input handler
+     * @param camera        The game camera
      */
     public GameWorld(Scene gameScene, SpriteManager spriteManager, Input input, Camera camera) {
         this.gameScene = gameScene;
@@ -140,6 +143,48 @@ public class GameWorld {
         }
     }
 
+    public void createTerrain(Scene scene, SpriteManager spriteManager) {
+        // Create a grid of floor tiles
+        int tileSize = 16;
+        int gridWidth = 100;
+        int gridHeight = 100;
+
+        for (int y = 0; y < gridHeight; y++) {
+            for (int x = 0; x < gridWidth; x++) {
+                // Alternate between tile types for visual variety
+                Random rand = new Random();
+                int t = abs(rand.nextInt())%8;
+                String tileName = (t) % 8 == 0 ? "tile_walkable_1" : "tile_walkable_2";
+                tileName = switch (t) {
+                    case 0 -> "tile_walkable_1";
+                    case 1 -> "tile_walkable_2";
+                    case 2 -> "tile_walkable_3";
+                    case 3 -> "tile_walkable_4";
+                    case 4 -> "tile_walkable_5";
+                    case 5 -> "tile_walkable_6";
+                    case 6 -> "tile_walkable_7";
+                    case 7 -> "tile_walkable_8";
+                    default -> tileName;
+                };
+
+                // Get a new sprite instance
+                Sprite tile = new Sprite(spriteManager.getSprite(tileName));
+                tile.setPaletteFromCodes(new String[]{"444","001","112","444"});
+                tile.setPosition(x * tileSize, y * tileSize);
+                tile.setScale(2.0f, 2.0f); // Scale up the tiles
+                scene.addGameObject(tile);
+            }
+        }
+
+        // Add some decorative elements
+        for (int i = 0; i < 5; i++) {
+            Sprite decoration = spriteManager.getSprite("lamp_post_0");
+            decoration.setPosition(100 + i * 120, 200);
+            decoration.setScale(2.0f, 2.0f);
+            scene.addGameObject(decoration);
+        }
+    }
+
     /**
      * Clear debug sprites from the scene
      */
@@ -150,8 +195,9 @@ public class GameWorld {
 
     /**
      * Creates the local player and adds them to the game
+     *
      * @param username Player's username
-     * @param color Player's color (RED, BLUE, GREEN, etc.)
+     * @param color    Player's color (RED, BLUE, GREEN, etc.)
      * @return The created player object
      */
     public Player createLocalPlayer(String username, String color) {
@@ -173,11 +219,12 @@ public class GameWorld {
 
     /**
      * Add a remote player (another player connected via network)
+     *
      * @param playerId The UUID of the remote player
      * @param username The username of the remote player
-     * @param color The color of the remote player
-     * @param x Initial X position
-     * @param y Initial Y position
+     * @param color    The color of the remote player
+     * @param x        Initial X position
+     * @param y        Initial Y position
      */
     public void addRemotePlayer(UUID playerId, String username, String color, float x, float y) {
         if (debug) System.out.println("Adding remote player: " + playerId + " with username: " + username);
@@ -235,6 +282,7 @@ public class GameWorld {
 
     /**
      * Remove a player from the game (when they disconnect)
+     *
      * @param playerId The UUID of the player to remove
      */
     public void removePlayer(UUID playerId) {
@@ -265,11 +313,12 @@ public class GameWorld {
 
     /**
      * Update a remote player's position based on network data
-     * @param playerId The player's UUID
-     * @param x New X position
-     * @param y New Y position
+     *
+     * @param playerId         The player's UUID
+     * @param x                New X position
+     * @param y                New Y position
      * @param directionOrdinal Direction ordinal from the Direction enum
-     * @param isMoving Whether the player is currently moving
+     * @param isMoving         Whether the player is currently moving
      */
     public void updatePlayerPosition(UUID playerId, float x, float y, int directionOrdinal, boolean isMoving, String color) {
         if (debug) {
@@ -356,6 +405,7 @@ public class GameWorld {
 
     /**
      * Set up network client for multiplayer
+     *
      * @param client The network client
      */
     public void setupNetworking(Client client) {
@@ -373,8 +423,9 @@ public class GameWorld {
 
     /**
      * Add a chat message to the display
+     *
      * @param username Sender's username
-     * @param message Message content
+     * @param message  Message content
      */
     public void displayChatMessage(String username, String message) {
         String formattedMessage = username + ": " + message;
@@ -396,6 +447,7 @@ public class GameWorld {
 
     /**
      * Set the UI component used for displaying chat messages
+     *
      * @param chatDisplay The UIText component for chat
      */
     public void setChatDisplay(UIText chatDisplay) {
@@ -431,6 +483,7 @@ public class GameWorld {
 
     /**
      * Update the game world each frame
+     *
      * @param deltaTime Time since last frame
      */
     public void update(float deltaTime) {
@@ -438,7 +491,7 @@ public class GameWorld {
         Runnable task;
         while ((task = mainThreadTasks.poll()) != null) {
             try {
-                if (debug) System.out.println("Processing queued task #" + (processedCount+1));
+                if (debug) System.out.println("Processing queued task #" + (processedCount + 1));
                 task.run();
                 processedCount++;
             } catch (Exception e) {
@@ -466,9 +519,6 @@ public class GameWorld {
             // Tell camera to follow player
             camera.follow(playerPos.x, playerPos.y);
 
-            if (debug) {
-                System.out.println("Following player at position: " + playerPos.x + ", " + playerPos.y);
-            }
         }
     }
 
@@ -487,6 +537,7 @@ public class GameWorld {
 
     /**
      * Set camera follow smoothness
+     *
      * @param smoothness Value between 0-1, higher = faster following
      */
     public void setCameraFollowSmoothness(float smoothness) {
@@ -497,6 +548,7 @@ public class GameWorld {
 
     /**
      * Send a chat message to all players
+     *
      * @param message The message to send
      */
     public void sendChatMessage(String message) {
@@ -543,6 +595,7 @@ public class GameWorld {
 
     /**
      * Get all registered sprite names
+     *
      * @return List of sprite names
      */
     public List<String> getRegisteredSpriteNames() {

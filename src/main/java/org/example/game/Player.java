@@ -351,7 +351,7 @@ public class Player extends GameObject {
 
     @Override
     public void render(Matrix4f viewProjectionMatrix) {
-        if (debug) System.out.println("Rendering player " + username + " at " + position.x + ", " + position.y + " (visible: " + (isAlive || !isLocalPlayer) + ")");
+        //if (debug) System.out.println("Rendering player " + username + " at " + position.x + ", " + position.y + " (visible: " + (isAlive || !isLocalPlayer) + ")");
 
         // Render character
         character.render(viewProjectionMatrix);

@@ -130,7 +130,6 @@ public class Engine {
                 handleCameraMovement(deltaTime);
             }
 
-            // Inside the main loop, after deltaTime is computed:
 
             // Update scene
             activeScene.update(deltaTime);

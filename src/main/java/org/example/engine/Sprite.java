@@ -112,10 +112,47 @@ public class Sprite extends GameObject implements ZOrderProvider  {
 
         material = new Material();
         material.setDiffuse(texture);
-        material.setAmbient(new Vector3f(0.3f, 0.3f, 0.3f));
-        material.setSpecular(new Vector3f(0.8f, 0.8f, 0.8f));
-        material.setShininess(32.0f);
+        material.setAmbient(new Vector3f(0.1f, 0.1f, 0.1f));
+        material.setSpecular(new Vector3f(0.0f, 0.0f, 0.0f));
+        material.setShininess(1.0f);
 
+        createShader();
+        setupBuffers();
+    }
+
+    public Sprite(Sprite original) {
+        // Copy the texture and UV coordinates
+        this.texture = original.texture;
+        this.u0 = original.getU0();
+        this.v0 = original.getV0();
+        this.u1 = original.getU1();
+        this.v1 = original.getV1();
+        this.width = original.width;
+        this.height = original.height;
+
+        // Copy material properties
+        this.material = new Material();
+        this.material.setDiffuse(original.material.getDiffuse());
+        this.material.setAmbient(new Vector3f(original.material.getAmbient()));
+        this.material.setSpecular(new Vector3f(original.material.getSpecular()));
+        this.material.setShininess(original.material.getShininess());
+
+        // Initialize other properties
+        this.x = original.x;
+        this.y = original.y;
+        this.z = original.z;
+        this.rotation = original.rotation;
+        this.scaleX = original.scaleX;
+        this.scaleY = original.scaleY;
+        this.color = original.color;
+        this.alpha = original.alpha;
+        this.FlipX = original.isFlipX();
+        this.FlipY = original.isFlipY();
+
+        // Copy palette
+        System.arraycopy(original.paletteFloats, 0, this.paletteFloats, 0, this.paletteFloats.length);
+
+        // Recreate shader and buffers
         createShader();
         setupBuffers();
     }
@@ -397,6 +434,11 @@ public class Sprite extends GameObject implements ZOrderProvider  {
     }
 
     public static void addGlobalLight(Light light) {
+        for (Light existingLight : globalLights) {
+            if (existingLight == light) {
+                return;
+            }
+        }
         globalLights.add(light);
     }
 

@@ -192,4 +192,21 @@ public class SpriteManager {
             sheet.clearCache();
         }
     }
+
+    /**
+     * Creates and returns an independent copy of a sprite by name.
+     * This is useful for creating multiple instances of the same sprite
+     * that need to have different properties.
+     *
+     * @param spriteName The name of the sprite to copy
+     * @return A new independent copy of the sprite
+     */
+    public Sprite createSpriteCopy(String spriteName) {
+        // Mark as dynamic to ensure we get a fresh copy
+        markSpriteAsDynamic(spriteName);
+
+        // Get a fresh sprite instance
+
+        return getSprite(spriteName);
+    }
 }

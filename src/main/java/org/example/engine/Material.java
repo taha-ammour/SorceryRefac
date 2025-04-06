@@ -11,8 +11,8 @@ public class Material {
     public Material() {
         // Default values (you can tweak these)
         ambient = new Vector3f(0.1f, 0.1f, 0.1f);
-        specular = new Vector3f(0.5f, 0.5f, 0.5f);
-        shininess = 32.0f;
+        specular = new Vector3f(0.0f, 0.0f, 0.0f);
+        shininess = 1.0f;
     }
 
     public Texture getDiffuse() {
