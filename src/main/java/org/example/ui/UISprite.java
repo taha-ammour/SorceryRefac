@@ -124,6 +124,9 @@ public class UISprite extends UIComponent {
     public Sprite getSprite() {
         return sprite;
     }
+    public void setSprite(Sprite sprite) {
+        this.sprite = sprite;
+    }
 
     @Override
     public void setPosition(float x, float y) {

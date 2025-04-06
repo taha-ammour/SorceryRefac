@@ -3,6 +3,7 @@ package org.example;
 import com.esotericsoftware.kryonet.Client;
 import org.example.engine.*;
 import org.example.game.Player;
+import org.example.game.SpellSystem;
 import org.example.ui.UIText;
 import org.joml.Vector3f;
 
@@ -20,6 +21,8 @@ public class GameWorld {
     private SpriteManager spriteManager;
     private Input input;
     private Camera camera;
+    private SpellSystem spellSystem;
+
 
     // Player management
     private Player localPlayer;
@@ -56,9 +59,17 @@ public class GameWorld {
         this.input = input;
         this.camera = camera;
 
+        this.spellSystem = new SpellSystem(spriteManager, gameScene);
+
+
         // For debugging, register all defined sprites
         collectRegisteredSprites();
     }
+
+    public void initializePlayerSpells(UUID playerId) {
+        spellSystem.initializePlayer(playerId);
+    }
+
 
     public void queueForMainThread(Runnable task) {
         mainThreadTasks.add(task);
@@ -214,8 +225,11 @@ public class GameWorld {
         gameScene.addGameObject(localPlayer);
         Player.addPlayer(localPlayer);
 
+        initializePlayerSpells(playerId);
+
         return localPlayer;
     }
+
 
     /**
      * Add a remote player (another player connected via network)
@@ -271,6 +285,8 @@ public class GameWorld {
                 // Add to scene
                 gameScene.addGameObject(newPlayer);
 
+                initializePlayerSpells(playerId);
+
                 if (debug) System.out.println("Added player to maps - UUID: " +
                         playerId + ", username: " + username);
             } catch (Exception e) {
@@ -320,7 +336,14 @@ public class GameWorld {
      * @param directionOrdinal Direction ordinal from the Direction enum
      * @param isMoving         Whether the player is currently moving
      */
-    public void updatePlayerPosition(UUID playerId, float x, float y, int directionOrdinal, boolean isMoving, String color) {
+    public void updatePlayerPosition(UUID playerId,
+                                     float x, float y,
+                                     int directionOrdinal,
+                                     boolean isMoving,
+                                     String color,
+                                     boolean FlipX, boolean FlipY,
+                                     int animationFrame,
+                                     String currentLegSprite) {
         if (debug) {
             System.out.println("Updating player position: " + playerId + " to (" + x + "," + y + ")");
         }
@@ -344,7 +367,8 @@ public class GameWorld {
 
         if (player != null) {
             // Player exists, just update position
-            player.receivePositionUpdate(x, y, directionOrdinal, isMoving);
+            player.receivePositionUpdate(x, y, directionOrdinal, isMoving, FlipX, FlipY);
+            player.updateRemoteAnimation(animationFrame, currentLegSprite);
         } else {
             // Create a new player if needed
             if (!remotePlayers.containsKey(playerId) && networkClient != null && networkClient.isConnected()) {
@@ -356,13 +380,18 @@ public class GameWorld {
                 final int dir = directionOrdinal;
                 final boolean moving = isMoving;
                 final String playerColor = (color != null && !color.isEmpty()) ? color : "RED";
+                final boolean Fx = FlipX;
+                final boolean Fy = FlipY;
+                final int animationF = animationFrame;
+                final String currentl = currentLegSprite;
 
 
                 queueForMainThread(() -> {
                     try {
                         // Check again in case the player was added between queue and execution
                         if (remotePlayers.containsKey(playerId)) {
-                            remotePlayers.get(playerId).receivePositionUpdate(posX, posY, dir, moving);
+                            remotePlayers.get(playerId).receivePositionUpdate(posX, posY, dir, moving, Fx, Fy);
+                            remotePlayers.get(playerId).updateRemoteAnimation(animationF, currentl);
                             return;
                         }
 
@@ -387,7 +416,8 @@ public class GameWorld {
                         gameScene.addGameObject(recoveredPlayer);
 
                         // Apply position
-                        recoveredPlayer.receivePositionUpdate(posX, posY, dir, moving);
+                        recoveredPlayer.receivePositionUpdate(posX, posY, dir, moving, Fx, Fy);
+                        recoveredPlayer.updateRemoteAnimation(animationF, currentl);
 
                         System.out.println("Player recovery completed on main thread: " + playerId);
                     } catch (Exception e) {
@@ -512,6 +542,8 @@ public class GameWorld {
             }
         }
 
+        spellSystem.update(deltaTime);
+
         // Update camera to follow local player if it exists
         if (localPlayer != null && camera != null) {
             Vector3f playerPos = localPlayer.getPosition();
@@ -520,6 +552,45 @@ public class GameWorld {
             camera.follow(playerPos.x, playerPos.y);
 
         }
+    }
+
+    public void handleSpellCast(Packets.SpellCast spellCast) {
+        try {
+            UUID playerId = UUID.fromString(spellCast.playerId);
+            spellSystem.castSpell(playerId, spellCast.spellType, spellCast.x, spellCast.y);
+        } catch (Exception e) {
+            System.err.println("Error handling spell cast: " + e.getMessage());
+        }
+    }
+
+    // Handle spell upgrade packets
+    public void handleSpellUpgrade(Packets.SpellUpgrade spellUpgrade) {
+        try {
+            UUID playerId = UUID.fromString(spellUpgrade.playerId);
+            spellSystem.upgradeSpell(playerId, spellUpgrade.spellType);
+        } catch (Exception e) {
+            System.err.println("Error handling spell upgrade: " + e.getMessage());
+        }
+    }
+
+    // Get player's current energy level
+    public float getPlayerEnergy(UUID playerId) {
+        return spellSystem.getPlayerEnergy(playerId);
+    }
+
+    // Get player's max energy
+    public float getPlayerMaxEnergy() {
+        return spellSystem.getPlayerMaxEnergy();
+    }
+
+    // Get spell cooldown for a player
+    public float getSpellCooldown(UUID playerId, String spellType) {
+        return spellSystem.getSpellCooldown(playerId, spellType);
+    }
+
+    // Get the spell system
+    public SpellSystem getSpellSystem() {
+        return spellSystem;
     }
 
     public void setCameraFollowMode(boolean follow) {

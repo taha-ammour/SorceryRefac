@@ -28,7 +28,14 @@ public class Player extends GameObject {
     private int health = 100;
     private int energy = 100;
     private int armor = 1;
+    private boolean isCasting = false;
+    private float castingTimer = 0f;
+    private float castingDuration = 0.5f; // Half second cast time
+    private String currentCastSpell = null;
+
+
     private boolean facingLeft = false;
+    private boolean FlipY = false;
 
     private boolean isAlive = true;
 
@@ -49,7 +56,16 @@ public class Player extends GameObject {
 
     // Player-specific sprite names to create unique copies
     private final String[] playerSpriteNames = new String[4]; // 0=down, 1=up, 2=right, 3=left
-    private final String playerHatName ;
+    private final String[] playerLegsSpriteNames = new String[4]; // 0=down, 1=up, 2=right, 3=left
+    private final String playerHatName;
+
+    private float animationTimer = 0f;
+    private static final float FIXED_FRAME_DURATION = 0.2f; // 0.2 seconds per frame
+    private float transitionTimer = 0f;
+    private static final float TRANSITION_DURATION = 0.1f; // Continue animating for 0.2 seconds after stopping
+    private int animationFrame = 0;
+    private String currentLegSprite = "leg_idle_1";
+
 
     public Player(UUID playerId, Input input, String username, SpriteManager spriteManager,
                   boolean isLocalPlayer, String color, float z, float x, float y) {
@@ -69,6 +85,11 @@ public class Player extends GameObject {
         playerSpriteNames[1] = "player_" + playerIdShort + "_u";
         playerSpriteNames[2] = "player_" + playerIdShort + "_r";
         playerSpriteNames[3] = "player_" + playerIdShort + "_rr";
+
+        playerLegsSpriteNames[0] = "player_leg_" + playerIdShort + "_l";//down-up
+        playerLegsSpriteNames[1] = "player_leg_" + playerIdShort + "_r";//down-up
+        playerLegsSpriteNames[2] = "player_leg_" + playerIdShort + "_d";//left-right
+        playerLegsSpriteNames[3] = "player_leg_" + playerIdShort + "_idle";//left-right
 
         playerHatName = "player_" + playerIdShort + "_us";
         // Only try to create sprites if we're on the main thread
@@ -132,6 +153,13 @@ public class Player extends GameObject {
         copySprite("player_sprite_u", playerSpriteNames[1], palette);
         copySprite("player_sprite_r", playerSpriteNames[2], palette);
         copySprite("player_sprite_rr", playerSpriteNames[3], palette);
+
+        copySprite("leg_l_1", playerLegsSpriteNames[0], palette);
+        copySprite("leg_r_1", playerLegsSpriteNames[1], palette);
+        copySprite("leg_d_1", playerLegsSpriteNames[2], palette);
+        copySprite("leg_idle_1", playerLegsSpriteNames[3], palette);
+
+
         copySprite("hat_d_1", playerHatName, palette);
 
     }
@@ -172,7 +200,8 @@ public class Player extends GameObject {
 
         // Add the body layer with the appropriate sprite
         character.addLayer("body", playerSpriteNames[0], 0, 0, 1);
-        character.addLayer("hat", "hat_d_1", 0, -0, -2);
+        character.addLayer("hat", "hat_d_1", 0, 0, -2);
+        character.addLayer("legs", playerLegsSpriteNames[0], 0, 0, -3);
 
 
         character.setScale(2.0f, 2.0f);
@@ -210,11 +239,155 @@ public class Player extends GameObject {
         }
     }
 
+
+
+    private void castSpell(String spellType) {
+        if (client != null && client.isConnected()) {
+            // Create a spell cast packet
+            Packets.SpellCast spellCast = new Packets.SpellCast();
+            spellCast.playerId = playerId.toString();
+            spellCast.spellType = spellType;
+            spellCast.x = position.x + (facingLeft ? -20 : 20); // Cast in front of player
+            spellCast.y = position.y;
+            spellCast.level = 1; // Default level
+
+            // Send packet
+            client.sendTCP(spellCast);
+
+            // Optionally play a casting animation
+            playCastAnimation(spellType);
+        }
+    }
+
+    private void handleSpellCasting(float deltaTime) {
+        // Only for local player
+        if (!isLocalPlayer || !isAlive) return;
+
+        // If currently casting, update timer
+        if (isCasting) {
+            castingTimer += deltaTime;
+            if (castingTimer >= castingDuration) {
+                // Finish casting
+                completeCasting();
+            }
+            return; // Don't process new spell inputs while casting
+        }
+
+        // Check if spell keys are pressed
+        if (input.isKeyJustPressed(GLFW_KEY_1)) {
+            // Fire spell - key 1
+            startCasting("fire");
+        } else if (input.isKeyJustPressed(GLFW_KEY_2)) {
+            // Ice spell - key 2
+            startCasting("ice");
+        } else if (input.isKeyJustPressed(GLFW_KEY_3)) {
+            // Lightning spell - key 3
+            startCasting("lightning");
+        }
+    }
+
+    private void startCasting(String spellType) {
+        if (isCasting) return; // Already casting
+
+        isCasting = true;
+        castingTimer = 0f;
+        currentCastSpell = spellType;
+
+        // Update character animation for casting
+        playCastAnimation(spellType);
+
+        System.out.println("Player " + username + " started casting " + spellType + " spell");
+    }
+
+    private void completeCasting() {
+        if (!isCasting || currentCastSpell == null) return;
+
+        System.out.println("Player " + username + " completing cast of " + currentCastSpell);
+
+        // Send spell cast packet to server
+        if (client != null && client.isConnected()) {
+            // Create a spell cast packet
+            Packets.SpellCast spellCast = new Packets.SpellCast();
+            spellCast.playerId = playerId.toString();
+            spellCast.spellType = currentCastSpell;
+
+            // Calculate spell position based on player direction
+            float offsetX = 32f; // Distance in front of player
+            float offsetY = 0f;
+
+            switch (currentDirection) {
+                case UP:
+                    offsetX = 0f;
+                    offsetY = -offsetX;
+                    break;
+                case DOWN:
+                    offsetX = 0f;
+                    offsetY = offsetX;
+                    break;
+                case LEFT:
+                    offsetX = -offsetX;
+                    offsetY = 0f;
+                    break;
+                case RIGHT:
+                    offsetX = offsetX;
+                    offsetY = 0f;
+                    break;
+            }
+
+            // Set final position
+            spellCast.x = position.x + offsetX;
+            spellCast.y = position.y + offsetY;
+            spellCast.level = 1; // Default level, would need to be fetched from spell system
+
+            System.out.println("Sending spell cast packet: " + currentCastSpell +
+                    " at position " + spellCast.x + "," + spellCast.y);
+
+            // Send packet
+            client.sendTCP(spellCast);
+        } else {
+            System.err.println("Cannot send spell cast - client is null or disconnected");
+        }
+
+        // Reset casting state
+        isCasting = false;
+        currentCastSpell = null;
+
+        // Reset character appearance
+        resetCastAnimation();
+    }
+
+    private void resetCastAnimation() {
+        // Reset any visual changes made during casting
+
+        // Example:
+        // character.setLayerColor("body", 0xFFFFFF, 1.0f); // Reset body color
+    }
+
+
+    private void playCastAnimation(String spellType) {
+        // This method can be implemented to show a casting animation
+        System.out.println("Playing cast animation for " + spellType + " spell");
+
+        // Change appearance based on spell type
+        switch(spellType.toLowerCase()) {
+            case "fire":
+                // Add visual effect for fire casting (e.g., red tint)
+                break;
+            case "ice":
+                // Add visual effect for ice casting (e.g., blue tint)
+                break;
+            case "lightning":
+                // Add visual effect for lightning casting (e.g., yellow glow)
+                break;
+        }
+    }
+
     @Override
     public void update(float deltaTime) {
         // Only control the local player
         if (isLocalPlayer && isAlive) {
             updateMovement(deltaTime);
+            handleSpellCasting(deltaTime);
 
             networkTimer += deltaTime;
             if ((isMoving || networkTimer >= 0.5f) && client != null && client.isConnected()) {
@@ -232,83 +405,166 @@ public class Player extends GameObject {
         boolean wasMoving = isMoving;
         Direction oldDirection = currentDirection;
 
+        // Start with not moving
         isMoving = false;
 
+        // Calculate movement vector based on all pressed keys
+        float dx = 0;
+        float dy = 0;
+
+        // Check all movement keys
         if (input.isKeyDown(GLFW_KEY_W)) {
-            move(Direction.UP, deltaTime);
-        }
-        if (input.isKeyDown(GLFW_KEY_D)) {
-            move(Direction.RIGHT, deltaTime);
-        }
-        if (input.isKeyDown(GLFW_KEY_A)) {
-            move(Direction.LEFT, deltaTime);
+            dy -= 1; // Moving up
+            currentDirection = Direction.UP;
+            isMoving = true;
         }
         if (input.isKeyDown(GLFW_KEY_S)) {
-            move(Direction.DOWN, deltaTime);
+            dy += 1; // Moving down
+            currentDirection = Direction.DOWN;
+            isMoving = true;
+        }
+        if (input.isKeyDown(GLFW_KEY_A)) {
+            dx -= 1; // Moving left
+            facingLeft = true;
+
+            // Only change primary direction to LEFT if not moving vertically
+            if (dy == 0) {
+                currentDirection = Direction.LEFT;
+            }
+            isMoving = true;
+        }
+        if (input.isKeyDown(GLFW_KEY_D)) {
+            dx += 1; // Moving right
+            facingLeft = false;
+
+            // Only change primary direction to RIGHT if not moving vertically
+            if (dy == 0) {
+                currentDirection = Direction.RIGHT;
+            }
+            isMoving = true;
         }
 
-        // Force a position update if direction changed, even if not moving
-        if (oldDirection != currentDirection && client != null && client.isConnected()) {
+        // Normalize diagonal movement to prevent faster diagonal speed
+        if (dx != 0 && dy != 0) {
+            float length = (float) Math.sqrt(dx * dx + dy * dy);
+            dx /= length;
+            dy /= length;
+        }
+
+        // Apply movement if moving
+        if (isMoving) {
+            transitionTimer = TRANSITION_DURATION;
+            animationTimer += deltaTime;
+            if (animationTimer >= FIXED_FRAME_DURATION) {
+                animationTimer = 0;
+                animationFrame = (animationFrame + 1) % 2; // Toggle between 0 and 1
+
+                if (dy != 0 && dx == 0) {
+                    currentLegSprite = (animationFrame == 0) ? getDirectionLegSprite(Direction.UP) : getDirectionLegSprite(Direction.DOWN);// OR DOWN
+                } else {
+                    currentLegSprite = (animationFrame == 0) ? getDirectionLegSprite(Direction.LEFT) : getDirectionLegSprite(Direction.RIGHT);
+                }
+
+                // Update the leg layer in your character using the update method
+                updateLegLayer(currentLegSprite);
+            }
+
+            float distance = moveSpeed * deltaTime;
+            position.x += dx * distance;
+            position.y += dy * distance;
+
+            // Update character position
+            character.setPosition(position.x, position.y, position.z);
+
+            // Update sprite direction and flip
+            character.setDirection(getDirectionSprite(currentDirection));
+            character.setFlipX(facingLeft);
+        }
+        else {
+            if (transitionTimer > 0) {
+                transitionTimer -= deltaTime;
+                animationTimer += deltaTime;
+                if (animationTimer >= FIXED_FRAME_DURATION) {
+                    animationTimer = 0;
+                    animationFrame = (animationFrame + 1) % 2;
+                    // Use your existing logic to choose leg sprite:
+                    if (dy != 0 && dx == 0) {
+                        currentLegSprite = (animationFrame == 0) ? getDirectionLegSprite(Direction.UP)
+                                : getDirectionLegSprite(Direction.DOWN);
+                    } else {
+                        currentLegSprite = (animationFrame == 0) ? getDirectionLegSprite(Direction.LEFT)
+                                : getDirectionLegSprite(Direction.RIGHT);
+                    }
+                    updateLegLayer(currentLegSprite);
+                }
+            }
+            else {
+                // Once the transition timer runs out, set the leg sprite to the idle state.
+                if (facingLeft) {
+                    currentLegSprite = playerLegsSpriteNames[2];
+                } else {
+                    currentLegSprite = getDirectionLegSprite(currentDirection);
+                }
+                updateLegLayer(currentLegSprite);
+            }
+        }
+        character.setFlipX(facingLeft);
+
+        // Send network update if direction changed or we're moving
+        if ((oldDirection != currentDirection || isMoving) && client != null && client.isConnected()) {
             sendPositionUpdate();
         }
     }
 
-    public void move(Direction direction, float deltaTime) {
-        if (!isAlive) return;
+    private void updateLegLayer(String spriteName) {
+        if (character == null || spriteName == null) return;
 
-        currentDirection = direction;
-        isMoving = true;
+        float legOffsetX = 0;
+        float legOffsetY = 0;
 
-        if (direction == Direction.LEFT) {
-            facingLeft = true;
-        } else if (direction == Direction.RIGHT) {
-            facingLeft = false;
+        if ( spriteName.endsWith("_d") ) {
+            legOffsetX = -1f;
         }
 
-        // Use player-specific sprite for direction
-        String directionSprite = getDirectionSprite(direction);
-        character.setDirection(directionSprite);
 
+        boolean updated = character.updateLayerSprite("legs", spriteName, legOffsetX, legOffsetY);
+
+        if (!updated) {
+            character.removeLayer("legs");
+            character.addLayer("legs", spriteName, legOffsetX, legOffsetY, -3);
+        }
         character.setFlipX(facingLeft);
-
-        // Move the player
-        float distance = moveSpeed * deltaTime;
-        switch (direction) {
-            case UP:
-                position.y -= distance;
-                break;
-            case DOWN:
-                position.y += distance;
-                break;
-            case LEFT:
-                position.x -= distance;
-                break;
-            case RIGHT:
-                position.x += distance;
-                break;
-        }
-
-        // Update character position to match player position
-        character.setPosition(position.x, position.y, position.z);
     }
+
+
 
     /**
      * Returns the player-specific sprite name for the given direction
      */
     private String getDirectionSprite(Direction direction) {
-        switch (direction) {
-            case UP: return playerSpriteNames[1];
-            case DOWN: return playerSpriteNames[0];
-            case RIGHT: return playerSpriteNames[2];
-            case LEFT: return playerSpriteNames[3];
-            default: return playerSpriteNames[0];
-        }
+        return switch (direction) {
+            case UP -> playerSpriteNames[1];
+            case DOWN -> playerSpriteNames[0];
+            case RIGHT -> playerSpriteNames[2];
+            case LEFT -> playerSpriteNames[3];
+            default -> playerSpriteNames[0];
+        };
+    }
+
+    private String getDirectionLegSprite(Direction direction) {
+        return switch (direction) {
+            case UP -> playerLegsSpriteNames[1];
+            case DOWN -> playerLegsSpriteNames[0];
+            case RIGHT -> playerLegsSpriteNames[3];
+            case LEFT -> playerLegsSpriteNames[2];
+            default -> playerLegsSpriteNames[0];
+        };
     }
 
     /**
      * Update this player's position based on network data
      */
-    public void receivePositionUpdate(float x, float y, int directionOrdinal, boolean moving) {
+    public void receivePositionUpdate(float x, float y, int directionOrdinal, boolean moving, boolean flipX, boolean flipY) {
         if (debug) System.out.println("Received position update for " + playerId + ": " + x + ", " + y);
 
         // Update position
@@ -325,9 +581,30 @@ public class Player extends GameObject {
             character.setDirection(getDirectionSprite(newDirection));
         }
 
+        facingLeft = flipX;
+        FlipY = flipY;
+        character.setFlipX(facingLeft);
+
         // Update movement state
         isMoving = moving;
         character.setMoving(moving);
+    }
+
+    public void updateRemoteAnimation(int animationFrame, String legSprite) {
+        if (!isLocalPlayer) {
+            if (legSprite != null && !legSprite.isEmpty()) {
+                this.animationFrame = animationFrame;
+
+                try {
+                    updateLegLayer(legSprite);
+                } catch (Exception e) {
+                    if (debug) {
+                        System.err.println("Error updating remote player leg sprite: " + e.getMessage());
+                        System.err.println("Attempted sprite: " + legSprite);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -342,6 +619,11 @@ public class Player extends GameObject {
             update.direction = currentDirection.ordinal();
             update.isMoving = isMoving;
             update.color = color;
+            update.FlipX = facingLeft;
+            update.FlipY = FlipY;
+
+            update.animationFrame = animationFrame;
+            update.currentLegSprite = currentLegSprite;
 
             if (debug) System.out.println("Sending position update: " + position.x + ", " + position.y);
 
@@ -399,7 +681,6 @@ public class Player extends GameObject {
     public static void setupClient(Client newClient) {
         client = newClient;
 
-        // If client changed, send initial positions for all existing players
         for (Player player : players.values()) {
             if (player.isLocalPlayer) {
                 player.sendPositionUpdate();

@@ -196,7 +196,7 @@ public class Main {
             System.out.println("Drawing all registered sprites for debugging");
             gameWorld.drawAllRegisteredSprites();
         }
-        gameWorld.createTerrain(scene, spriteManager);
+        //gameWorld.createTerrain(scene, spriteManager);
 
         // Set up multiplayer if selected
         if (gameMode == 2) {
@@ -251,6 +251,14 @@ public class Main {
 
         // Set chat display in the game world
         gameWorld.setChatDisplay(chatDisplay);
+
+        if (gameWorld.getLocalPlayer() != null) {
+            // Create spell UI for local player
+            SpellUI spellUI = new SpellUI(10, 70, 300, 120,
+                    gameWorld, gameWorld.getLocalPlayer().getPlayerId(),
+                    spriteManager, fontSheet, fontShader);
+            uiManager.addComponent(spellUI, true);
+        }
 
         // Add UI game object to the scene
         gameWorld.getGameScene().addGameObject(uiGameObject);

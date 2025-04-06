@@ -32,13 +32,6 @@ public class Packets {
         public String message;
     }
 
-    /**
-     * Basic movement update packet (used by lobby system)
-     */
-    public static class MovementUpdate {
-        public int playerId;
-        public float x, y;
-    }
 
     /**
      * Sent when a player joins the game
@@ -68,6 +61,11 @@ public class Packets {
         public int direction;
         public boolean isMoving;
         public String color;
+        public boolean FlipX;
+        public boolean FlipY;
+
+        public int animationFrame = 0;
+        public String currentLegSprite = "";
     }
 
     /**
@@ -89,7 +87,29 @@ public class Packets {
         public String targetId;  // If applicable
         public float x;  // If applicable
         public float y;  // If applicable
+        public int spellLevel; // Current level of the spell being cast
     }
+
+    /**
+     * Sent when player casts a spell
+     */
+    public static class SpellCast {
+        public String playerId;
+        public String spellType; // "fire", "ice", "lightning"
+        public float x; // Cast position X
+        public float y; // Cast position Y
+        public int level; // Spell level
+    }
+
+    /**
+     * Sent when player upgrades a spell
+     */
+    public static class SpellUpgrade {
+        public String playerId;
+        public String spellType;
+        public int newLevel;
+    }
+
 
     /**
      * Server information for discovery

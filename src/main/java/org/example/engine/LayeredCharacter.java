@@ -215,6 +215,55 @@ public class LayeredCharacter extends GameObject implements ZOrderProvider {
         return scaleY;
     }
 
+    public boolean removeLayer(String layerName) {
+        return layers.removeIf(layer -> layer.layerName.equals(layerName));
+    }
+
+    public boolean updateLayerSprite(String layerName, String newSpriteName, float offsetX,float offsetY) {
+        for (Layer layer : layers) {
+            if (layer.layerName.equals(layerName)) {
+                if (layer.animation == null) {
+                    // Only update static layers
+                    layer.staticSpriteName = newSpriteName;
+                    layer.offsetX = offsetX;
+                    layer.offsetY = offsetY;
+                    // Invalidate cached sprite
+                    layer.cachedSprite = null;
+                    layer.cachedSpriteName = null;
+                    return true;
+                }
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public boolean updateLayerSprite(String layerName, String newSpriteName) {
+        for (Layer layer : layers) {
+            if (layer.layerName.equals(layerName)) {
+                if (layer.animation == null) {
+                    // Only update static layers
+                    layer.staticSpriteName = newSpriteName;
+                    // Invalidate cached sprite
+                    layer.cachedSprite = null;
+                    layer.cachedSpriteName = null;
+                    return true;
+                }
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public Layer getLayer(String layerName) {
+        for (Layer layer : layers) {
+            if (layer.layerName.equals(layerName)) {
+                return layer;
+            }
+        }
+        return null;
+    }
+
     private static class Layer {
         String layerName;
         Animation animation;

@@ -257,6 +257,10 @@ public class GameNetworking {
         kryo.register(Packets.GameStart.class);
         kryo.register(Packets.GameEnd.class);
 
+        kryo.register(Packets.SpellCast.class);
+        kryo.register(Packets.SpellUpgrade.class);
+        kryo.register(Packets.GameAction.class);
+
         // Additional game-specific classes
         kryo.register(Direction.class);
     }
@@ -339,7 +343,11 @@ public class GameNetworking {
                             update.y,
                             update.direction,
                             update.isMoving,
-                            update.color
+                            update.color,
+                            update.FlipX,
+                            update.FlipY,
+                            update.animationFrame,
+                            update.currentLegSprite
                     );
                 }
                 // Handle chat messages
@@ -364,6 +372,27 @@ public class GameNetworking {
                     // Notify listeners
                     for (GameNetworkListener listener : listeners) {
                         listener.onHostMigration(newHostId);
+                    }
+                } else if (object instanceof Packets.SpellCast) {
+                    Packets.SpellCast spellCast = (Packets.SpellCast) object;
+
+                    // Pass to game for processing
+                    game.handleSpellCast(spellCast);
+                }
+                // Handle spell upgrade packets
+                else if (object instanceof Packets.SpellUpgrade) {
+                    Packets.SpellUpgrade spellUpgrade = (Packets.SpellUpgrade) object;
+
+                    // Pass to game for processing
+                    game.handleSpellUpgrade(spellUpgrade);
+                }
+                // Handle game action packets (may include spell effects)
+                else if (object instanceof Packets.GameAction) {
+                    Packets.GameAction gameAction = (Packets.GameAction) object;
+
+                    // Spell-related game actions (1-3 are spell types)
+                    if (gameAction.actionType >= 1 && gameAction.actionType <= 3) {
+                        game.getSpellSystem().processSpellAction(gameAction);
                     }
                 }
             }
