@@ -29,6 +29,8 @@ public class GameWorld {
     private final Map<UUID, Player> remotePlayers = new ConcurrentHashMap<>();
     private final Map<String, UUID> usernameToId = new ConcurrentHashMap<>();
 
+    private VoiceManager voiceManager;
+
     // Networking
     private Client networkClient;
     private boolean isNetworkGame = false;
@@ -64,6 +66,14 @@ public class GameWorld {
 
         // For debugging, register all defined sprites
         collectRegisteredSprites();
+    }
+
+    public void initializeVoiceSystem() {
+        if (localPlayer != null && networkClient != null) {
+            voiceManager = new VoiceManager(localPlayer, networkClient);
+            voiceManager.initializeVoice();
+            gameScene.addGameObject(voiceManager);
+        }
     }
 
     public void initializePlayerSpells(UUID playerId) {
@@ -449,6 +459,7 @@ public class GameWorld {
 
         // Set up network listeners
         GameNetworking.setupClientListeners(client, this);
+        initializeVoiceSystem();
     }
 
     /**
@@ -671,5 +682,13 @@ public class GameWorld {
      */
     public List<String> getRegisteredSpriteNames() {
         return registeredSpriteNames;
+    }
+
+    public VoiceManager getVoiceManager() {
+        return voiceManager;
+    }
+
+    public void setVoiceManager(VoiceManager voiceManager) {
+        this.voiceManager = voiceManager;
     }
 }

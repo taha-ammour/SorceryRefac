@@ -1,5 +1,7 @@
 package org.example;
 
+import org.joml.Vector3f;
+
 import java.util.ArrayList;
 
 /**
@@ -109,6 +111,17 @@ public class Packets {
         public String spellType;
         public int newLevel;
     }
+
+    // Add to your Packets.java
+    public static class VoicePacket {
+        public String playerId;
+        public byte[] audioData;
+        public float x;  // Player position x
+        public float y;  // Player position y
+        public float z;  // Player position z
+        public float timestamp;
+    }
+
 
 
     /**

@@ -7,6 +7,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import org.example.game.Direction;
 import org.example.game.Player;
+import org.joml.Vector3f;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -261,7 +262,10 @@ public class GameNetworking {
         kryo.register(Packets.SpellUpgrade.class);
         kryo.register(Packets.GameAction.class);
 
-        // Additional game-specific classes
+        kryo.register(Packets.VoicePacket.class);
+        kryo.register(byte[].class);
+        kryo.register(Vector3f.class);
+
         kryo.register(Direction.class);
     }
 
@@ -393,6 +397,14 @@ public class GameNetworking {
                     // Spell-related game actions (1-3 are spell types)
                     if (gameAction.actionType >= 1 && gameAction.actionType <= 3) {
                         game.getSpellSystem().processSpellAction(gameAction);
+                    }
+                }
+                else if (object instanceof Packets.VoicePacket) {
+                    Packets.VoicePacket voicePacket = (Packets.VoicePacket) object;
+
+                    // Process voice packet
+                    if (game.getVoiceManager() != null) {
+                        game.getVoiceManager().processVoicePacket(voicePacket);
                     }
                 }
             }

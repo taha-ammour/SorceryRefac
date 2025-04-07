@@ -1,7 +1,7 @@
 package org.example.engine;
 
+import org.example.GameWorld;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
@@ -24,7 +24,7 @@ public class Engine {
     private Camera camera;
     private boolean running = false;
     private UIManagerGameObject uiGameObject;
-    private org.example.GameWorld gameWorld;
+    private static org.example.GameWorld gameWorld;
 
     public void init(int width, int height, String title) {
         // Set up error callback
@@ -228,5 +228,8 @@ public class Engine {
     }
     public void setGameWorld(org.example.GameWorld gameWorld) {
         this.gameWorld = gameWorld;
+    }
+    public static GameWorld getGameWorld(){
+        return gameWorld;
     }
 }

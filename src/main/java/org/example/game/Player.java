@@ -2,6 +2,7 @@ package org.example.game;
 
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Server;
+import org.example.GameWorld;
 import org.example.Packets;
 import org.example.engine.*;
 import org.joml.Matrix4f;
@@ -388,6 +389,8 @@ public class Player extends GameObject {
         if (isLocalPlayer && isAlive) {
             updateMovement(deltaTime);
             handleSpellCasting(deltaTime);
+
+            GameWorld gameWorld = Engine.getGameWorld();
 
             networkTimer += deltaTime;
             if ((isMoving || networkTimer >= 0.5f) && client != null && client.isConnected()) {
