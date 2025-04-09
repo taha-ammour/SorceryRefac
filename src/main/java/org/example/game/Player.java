@@ -305,40 +305,66 @@ public class Player extends GameObject {
 
         System.out.println("Player " + username + " completing cast of " + currentCastSpell);
 
-        // Send spell cast packet to server
+        // Calculate spell position based on player direction
+        float offsetX = 50f; // Distance in front of player
+        float offsetY = 0f;
+
+        switch (currentDirection) {
+            case UP:
+                offsetX = 0f;
+                offsetY = -offsetX;
+                break;
+            case DOWN:
+                offsetX = 0f;
+                offsetY = offsetX;
+                break;
+            case LEFT:
+                offsetX = -offsetX;
+                offsetY = 0f;
+                break;
+            case RIGHT:
+                offsetX = offsetX;
+                offsetY = 0f;
+                break;
+        }
+
+        // Final spell position
+        float spellX = position.x + offsetX;
+        float spellY = position.y + offsetY;
+
+        // Get current game world and spell system
+        try {
+            org.example.GameWorld gameWorld = org.example.engine.Engine.getGameWorld();
+            if (gameWorld != null) {
+                // Try to cast spell directly through the local spell system
+                SpellSystem spellSystem = gameWorld.getSpellSystem();
+                if (spellSystem != null) {
+                    SpellEntity spellEntity = spellSystem.castSpell(playerId, currentCastSpell, spellX, spellY);
+                    if (spellEntity != null) {
+                        System.out.println("Successfully created local spell entity!");
+                    } else {
+                        System.err.println("Failed to create local spell entity!");
+                    }
+                } else {
+                    System.err.println("SpellSystem not found in GameWorld!");
+                }
+            } else {
+                System.err.println("GameWorld is null!");
+            }
+        } catch (Exception e) {
+            System.err.println("Error accessing GameWorld or SpellSystem: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Also try to send via network as before
         if (client != null && client.isConnected()) {
             // Create a spell cast packet
             Packets.SpellCast spellCast = new Packets.SpellCast();
             spellCast.playerId = playerId.toString();
             spellCast.spellType = currentCastSpell;
-
-            // Calculate spell position based on player direction
-            float offsetX = 32f; // Distance in front of player
-            float offsetY = 0f;
-
-            switch (currentDirection) {
-                case UP:
-                    offsetX = 0f;
-                    offsetY = -offsetX;
-                    break;
-                case DOWN:
-                    offsetX = 0f;
-                    offsetY = offsetX;
-                    break;
-                case LEFT:
-                    offsetX = -offsetX;
-                    offsetY = 0f;
-                    break;
-                case RIGHT:
-                    offsetX = offsetX;
-                    offsetY = 0f;
-                    break;
-            }
-
-            // Set final position
-            spellCast.x = position.x + offsetX;
-            spellCast.y = position.y + offsetY;
-            spellCast.level = 1; // Default level, would need to be fetched from spell system
+            spellCast.x = spellX;
+            spellCast.y = spellY;
+            spellCast.level = 1; // Default level
 
             System.out.println("Sending spell cast packet: " + currentCastSpell +
                     " at position " + spellCast.x + "," + spellCast.y);

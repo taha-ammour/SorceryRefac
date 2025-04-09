@@ -275,7 +275,6 @@ public class Sprite extends GameObject implements ZOrderProvider  {
 
     @Override
     public void update(float deltaTime) {
-        // Update per–sprite logic; for example, update view position from the camera.
         setViewPos(Camera.getCamcenter());
     }
 

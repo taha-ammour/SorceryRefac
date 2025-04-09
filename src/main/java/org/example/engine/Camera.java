@@ -35,7 +35,7 @@ public class Camera {
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
         this.position = new Vector3f(0, 0, 0);
-        this.zoom = 0.5f;
+        this.zoom = 0.65f;
         this.rotation = 0.0f;
         projectionMatrix = new Matrix4f().ortho2D(0, viewportWidth, viewportHeight, 0);
         viewMatrix = new Matrix4f();
@@ -76,6 +76,7 @@ public class Camera {
         // Update camera center for reference
         Vector3f camCenter = new Vector3f(position)
                 .add(viewportWidth / (2.0f * zoom), viewportHeight / (2.0f * zoom), 0);
+
         Camcen = camCenter;
     }
 

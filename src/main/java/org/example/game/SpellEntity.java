@@ -7,28 +7,35 @@ import org.example.engine.SpriteManager;
 import org.example.engine.ZOrderProvider;
 import org.example.game.Spells.AbstractSpell;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Entity representing a cast spell in the game world
+ */
 public class SpellEntity extends GameObject implements ZOrderProvider {
-    // Spell logic from previous implementation
+    // Spell components
     private AbstractSpell spell;
+    private SpriteManager spriteManager;
+
+    // Position and state
+    private Vector3f position = new Vector3f();
+    private float lifeTime = 0f;
+    private float maxLifeTime = 3.0f;
+    private boolean active = true;
+    private boolean debug = false;
 
     // Rendering components
     private Sprite currentSprite;
-    private SpriteManager spriteManager;
-    private float x, y;
-    private float lifeTime = 0f;
-    private float maxLifeTime = 3f; // Increased duration for visibility
-    private boolean active = false;
-    private boolean debug = true;
+    private List<Sprite> effectSprites = new ArrayList<>();
 
     // Spell type and variations
     private SpellType spellType;
-    private Map<String, List<Integer>> spellVariations;
+    private Map<String, List<Integer>> spellVariations = new HashMap<>();
     private String currentVariation;
 
     // Animation tracking
@@ -36,34 +43,47 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
     private float animationSpeed = 0.2f;
     private int currentFrame = 0;
 
+    // Used for glow effects and color shifting
+    private float glowTimer = 0f;
+    private float glowSpeed = 2.0f;
+    private float scaleTimer = 0f;
+    private float scaleSpeed = 3.0f;
+
+    /**
+     * Spell types with their respective sprite IDs
+     */
     public enum SpellType {
-        FIRE("fire", new int[]{218, 219}),  // Using flame_spell_fil_ic_1, flame_spell_ic_1
-        ICE("ice", new int[]{221, 222}),    // Using spread_spell_ic_1, type_spell_sp_ic_1
-        LIGHTNING("lightning", new int[]{223, 224}); // Using type_spell_fl_ic_1, type_spell_pa_ic_1
+        FIRE("fire", new int[]{158, 159, 160, 161}),      // Fire spell sprites
+        ICE("ice", new int[]{221, 222, 221, 222}),        // Ice spell sprites
+        LIGHTNING("lightning", new int[]{223, 224, 223, 224}); // Lightning spell sprites
 
         private final String typeName;
-        private final int[] baseSpriteIds;
+        private final int[] spriteIds;
 
-        SpellType(String typeName, int[] baseSpriteIds) {
+        SpellType(String typeName, int[] spriteIds) {
             this.typeName = typeName;
-            this.baseSpriteIds = baseSpriteIds;
+            this.spriteIds = spriteIds;
         }
 
         public String getTypeName() {
             return typeName;
         }
 
-        public int[] getBaseSpriteIds() {
-            return baseSpriteIds;
+        public int[] getSpriteIds() {
+            return spriteIds;
         }
     }
 
+    /**
+     * Create a new spell entity
+     */
     public SpellEntity(SpriteManager spriteManager, AbstractSpell spell, SpellType spellType, float x, float y) {
         this.spriteManager = spriteManager;
         this.spell = spell;
         this.spellType = spellType;
-        this.x = x;
-        this.y = y;
+        this.position.x = x;
+        this.position.y = y;
+        this.position.z = 10.0f; // High Z value to ensure visibility
 
         System.out.println("Creating " + spellType.getTypeName() + " spell at " + x + "," + y);
 
@@ -71,66 +91,147 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
         initializeSpellVariations();
 
         // Set initial variation
-        setVariation("base");
+        setVariation("impact");  // Start with impact for better visuals
+
+        // Create additional effect sprites for enhanced visuals
+        createEffectSprites();
 
         // Cast the spell
-        spell.cast();
+        if (spell != null) {
+            try {
+                spell.cast();
+            } catch (Exception e) {
+                System.err.println("Error casting spell: " + e.getMessage());
+            }
+        }
+
         this.active = true;
-
-        // Force sprite update after creation
-        updateSprite();
     }
 
+    /**
+     * Initialize the different variations of spell animations
+     */
     private void initializeSpellVariations() {
-        spellVariations = new HashMap<>();
-
-        // Add base variation from sprite type
-        List<Integer> baseVariation = new ArrayList<>();
-        for (int spriteId : spellType.getBaseSpriteIds()) {
-            baseVariation.add(spriteId);
-            System.out.println("Added base sprite ID: " + spriteId + " to variation");
+        // Base variation (primary sprites)
+        List<Integer> baseIds = new ArrayList<>();
+        for (int id : spellType.getSpriteIds()) {
+            baseIds.add(id);
         }
-        spellVariations.put("base", baseVariation);
+        spellVariations.put("base", baseIds);
 
-        // Add cast variations based on spell type
-        List<Integer> castVariation = new ArrayList<>();
-        if (spellType == SpellType.FIRE) {
-            // Use pre-defined fire spell cast sprites (154-157)
-            castVariation.add(154);
-            castVariation.add(155);
-            castVariation.add(156);
-            castVariation.add(157);
-        } else if (spellType == SpellType.ICE) {
-            // For ice, we can use the spread spell sprites
-            castVariation.add(221);
-            castVariation.add(221);
-            castVariation.add(222);
-            castVariation.add(222);
-        } else if (spellType == SpellType.LIGHTNING) {
-            // For lightning, use the type spell sprites
-            castVariation.add(223);
-            castVariation.add(224);
-            castVariation.add(223);
-            castVariation.add(224);
+        // Cast variation (when spell is being cast)
+        List<Integer> castIds = new ArrayList<>();
+        switch (spellType) {
+            case FIRE:
+                castIds.add(154);
+                castIds.add(155);
+                castIds.add(156);
+                castIds.add(157);
+                break;
+            case ICE:
+                castIds.add(221);
+                castIds.add(222);
+                castIds.add(221);
+                castIds.add(222);
+                break;
+            case LIGHTNING:
+                castIds.add(223);
+                castIds.add(224);
+                castIds.add(223);
+                castIds.add(224);
+                break;
         }
-        spellVariations.put("cast", castVariation);
+        spellVariations.put("cast", castIds);
 
-        // Add impact variations
-        List<Integer> impactVariation = new ArrayList<>();
+        // Impact variation (when spell hits)
+        List<Integer> impactIds;
         if (spellType == SpellType.FIRE) {
-            // Use pre-defined fire spell impact sprites (158-161)
-            impactVariation.add(158);
-            impactVariation.add(159);
-            impactVariation.add(160);
-            impactVariation.add(161);
+            impactIds = new ArrayList<>();
+            impactIds.add(158);
+            impactIds.add(159);
+            impactIds.add(160);
+            impactIds.add(161);
         } else {
-            // For other spells, reuse cast sprites for impact
-            impactVariation.addAll(castVariation);
+            // For other spell types, reuse cast sprites
+            impactIds = new ArrayList<>(castIds);
         }
-        spellVariations.put("impact", impactVariation);
+        spellVariations.put("impact", impactIds);
+
+        System.out.println("Initialized spell variations for " + spellType.getTypeName());
     }
 
-    // Set current spell variation
+    /**
+     * Create additional effect sprites for better visuals
+     */
+    private void createEffectSprites() {
+        try {
+            // Choose appropriate effects based on spell type
+            String[] effectSpriteNames;
+            switch (spellType) {
+                case FIRE:
+                    effectSpriteNames = new String[]{"spell_cast_fire_1", "spell_cast_fire_2", "spell_cast_fire_3"};
+                    break;
+                case ICE:
+                    effectSpriteNames = new String[]{"spell_castpartpoint_1", "spell_castpartpoint_2", "spell_castpartpoint_3"};
+                    break;
+                case LIGHTNING:
+                    effectSpriteNames = new String[]{"spell_cast_sm_fire_1", "spell_cast_sm_fire_2", "spell_cast_sm_fire_3"};
+                    break;
+                default:
+                    effectSpriteNames = new String[]{"spell_cast_fire_1", "spell_cast_fire_2"};
+            }
+
+            // Create sprites for each effect
+            for (String spriteName : effectSpriteNames) {
+                try {
+                    Sprite effectSprite = spriteManager.getSprite(spriteName);
+                    if (effectSprite != null) {
+                        // Position at spell location
+                        effectSprite.setPosition(position.x, position.y);
+                        effectSprite.setZ(position.z - 0.1f); // Slightly behind main sprite
+
+                        // Apply color based on spell type
+                        applySpellTypeColor(effectSprite);
+
+                        // Make larger for visibility
+                        effectSprite.setScale(3.0f, 3.0f);
+
+                        // Add to effects list
+                        effectSprites.add(effectSprite);
+                    }
+                } catch (Exception e) {
+                    // Skip if sprite not found
+                    System.err.println("Effect sprite not found: " + spriteName);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating effect sprites: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Apply color effects based on spell type
+     */
+    private void applySpellTypeColor(Sprite sprite) {
+        if (sprite == null) return;
+
+        switch (spellType) {
+            case FIRE:
+                sprite.setColor(0xFF5500, 1.0f); // Orange for fire
+                break;
+            case ICE:
+                sprite.setColor(0x00AAFF, 1.0f); // Blue for ice
+                break;
+            case LIGHTNING:
+                sprite.setColor(0xFFFF00, 1.0f); // Yellow for lightning
+                break;
+        }
+    }
+
+    /**
+     * Set the current variation of the spell
+     */
     public void setVariation(String variationName) {
         if (!spellVariations.containsKey(variationName)) {
             System.err.println("Unknown spell variation: " + variationName);
@@ -139,38 +240,49 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
 
         this.currentVariation = variationName;
         this.currentFrame = 0;
-        System.out.println("Set " + spellType.getTypeName() + " spell variation to: " + variationName);
-        updateSprite();
+        updateSprite(); // Update sprite after changing variation
     }
 
+    /**
+     * Update the current sprite based on animation frame
+     */
     private void updateSprite() {
-        // Get the current variation's sprite IDs
-        List<Integer> currentFrames = spellVariations.get(currentVariation);
-        if (currentFrames == null || currentFrames.isEmpty()) {
-            System.err.println("No frames for variation: " + currentVariation);
-            return;
-        }
-
-        // Get the sprite ID for the current frame
-        int spriteId = currentFrames.get(currentFrame % currentFrames.size());
-
         try {
-            // Get the sprite by ID
-            this.currentSprite = spriteManager.getSprite(spriteId);
+            // Get the sprite IDs for the current variation
+            List<Integer> frames = spellVariations.get(currentVariation);
+            if (frames == null || frames.isEmpty()) {
+                System.err.println("No frames for variation: " + currentVariation);
+                return;
+            }
 
-            if (this.currentSprite != null) {
-                System.out.println("Using sprite ID: " + spriteId + " for " +
-                        spellType.getTypeName() + " spell, frame: " + currentFrame);
+            // Get sprite ID for current frame
+            int spriteId = frames.get(currentFrame % frames.size());
 
-                // Set position and enhance visibility
-                this.currentSprite.setPosition(x, y);
-                this.currentSprite.setZ(50.0f);  // High Z-order for visibility
-                this.currentSprite.setScale(3.0f, 3.0f);  // Make it larger
-            } else {
-                System.err.println("Failed to get sprite with ID: " + spriteId);
+            try {
+                // Create or get sprite
+                Sprite sprite = spriteManager.getSprite(spriteId);
+
+                if (sprite != null) {
+                    // Update the current sprite
+                    currentSprite = sprite;
+
+                    // Set position
+                    currentSprite.setPosition(position.x, position.y);
+                    currentSprite.setZ(position.z);
+
+                    // Make it larger for visibility
+                    currentSprite.setScale(3.0f, 3.0f);
+
+                    // Apply color based on spell type
+                    applySpellTypeColor(currentSprite);
+                } else {
+                    System.err.println("Failed to get sprite with ID: " + spriteId);
+                }
+            } catch (Exception e) {
+                System.err.println("Error updating sprite: " + e.getMessage());
             }
         } catch (Exception e) {
-            System.err.println("Error getting sprite: " + e.getMessage());
+            System.err.println("Error in updateSprite: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -185,73 +297,114 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
         // Update animation
         animationTimer += deltaTime;
         if (animationTimer >= animationSpeed) {
-            // Get the current variation's frames
-            List<Integer> currentFrames = spellVariations.get(currentVariation);
-            if (currentFrames != null && !currentFrames.isEmpty()) {
-                // Update frame
-                currentFrame = (currentFrame + 1) % currentFrames.size();
+            // Move to next frame
+            currentFrame = (currentFrame + 1) % spellVariations.get(currentVariation).size();
 
-                // Update sprite
-                updateSprite();
-
-                System.out.println("Updated " + spellType.getTypeName() +
-                        " spell to frame " + currentFrame + " of " + currentFrames.size());
-            }
+            // Update sprite for new frame
+            updateSprite();
 
             // Reset animation timer
             animationTimer = 0f;
         }
 
+        // Update glow and scale effects
+        updateVisualEffects(deltaTime);
+
+        // Update effect sprites positions
+        for (Sprite effect : effectSprites) {
+            effect.setPosition(position.x, position.y);
+        }
+
         // Deactivate spell after max lifetime
         if (lifeTime >= maxLifeTime) {
-            System.out.println("Spell deactivated after reaching max lifetime");
             active = false;
         }
     }
 
-    @Override
-    public void render(Matrix4f viewProjectionMatrix) {
-        if (!active) {
-            return;
+    /**
+     * Update visual effects like glow and scaling
+     */
+    private void updateVisualEffects(float deltaTime) {
+        // Update glow timer
+        glowTimer += deltaTime * glowSpeed;
+        float glowFactor = 0.7f + 0.3f * (float)Math.sin(glowTimer);
+
+        // Update scale timer
+        scaleTimer += deltaTime * scaleSpeed;
+        float scaleFactor = 2.5f + 0.5f * (float)Math.sin(scaleTimer);
+
+        // Apply effects to current sprite
+        if (currentSprite != null) {
+            // Apply pulsing scale effect
+            currentSprite.setScale(scaleFactor, scaleFactor);
+
+            // Apply color intensity based on spell type
+            switch (spellType) {
+                case FIRE:
+                    // Pulsing red-orange glow for fire
+                    currentSprite.setColor(0xFF2000 + (int)(0x30 * glowFactor), 1.0f);
+                    break;
+                case ICE:
+                    // Pulsing blue glow for ice
+                    currentSprite.setColor(0x0040FF + (int)(0x30 * glowFactor), 1.0f);
+                    break;
+                case LIGHTNING:
+                    // Pulsing yellow glow for lightning
+                    currentSprite.setColor(0xFFCC00 + (int)(0x30 * glowFactor), 1.0f);
+                    break;
+            }
         }
 
-        if (currentSprite == null) {
-            System.err.println("Cannot render spell - sprite is null");
-            return;
+        // Apply effects to effect sprites
+        for (int i = 0; i < effectSprites.size(); i++) {
+            Sprite effect = effectSprites.get(i);
+
+            // Different scale for each effect sprite
+            float effectScale = 2.0f + 0.5f * (float)Math.sin(scaleTimer + i * 0.5f);
+            effect.setScale(effectScale, effectScale);
+
+            // Different position offsets for each effect
+            float offsetX = 5.0f * (float)Math.sin(glowTimer + i * 0.7f);
+            float offsetY = 5.0f * (float)Math.cos(glowTimer + i * 0.7f);
+            effect.setPosition(position.x + offsetX, position.y + offsetY);
         }
+    }
+
+    @Override
+    public void render(Matrix4f viewProj) {
+        if (!active) return;
 
         try {
-            // Update position before rendering
-            currentSprite.setPosition(x, y);
-
-            // Render sprite
-            currentSprite.render(viewProjectionMatrix);
-
-            if (debug && Math.random() < 0.05) { // Only log occasionally to avoid spam
-                System.out.println("Rendering " + spellType.getTypeName() +
-                        " spell at: " + x + "," + y + ", frame: " + currentFrame);
+            // Render effect sprites first (they go behind the main sprite)
+            for (Sprite effect : effectSprites) {
+                if (effect != null) {
+                    effect.render(viewProj);
+                }
             }
+
+            // Render main sprite on top
+            if (currentSprite != null) {
+                currentSprite.render(viewProj);
+            } else {
+                System.err.println("Cannot render spell - sprite is null");
+            }
+
         } catch (Exception e) {
             System.err.println("Error rendering spell: " + e.getMessage());
-            e.printStackTrace();
+            if (debug) {
+                e.printStackTrace();
+            }
         }
     }
 
-    // Create a copy of the spell entity
-    public SpellEntity createCopy() {
-        SpellEntity copy = new SpellEntity(spriteManager, spell, spellType, x, y);
-        copy.currentVariation = this.currentVariation;
-        copy.currentFrame = this.currentFrame;
-        copy.maxLifeTime = this.maxLifeTime;
-        return copy;
-    }
-
-    // Networking support
+    /**
+     * Convert to network action packet
+     */
     public Packets.GameAction toGameAction() {
         Packets.GameAction action = new Packets.GameAction();
         action.actionType = getSpellActionType();
-        action.x = x;
-        action.y = y;
+        action.x = position.x;
+        action.y = position.y;
         return action;
     }
 
@@ -264,7 +417,7 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
         }
     }
 
-    // Getters
+    // Getters and setters
     public AbstractSpell getSpell() {
         return spell;
     }
@@ -277,21 +430,17 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
         return active;
     }
 
-    // Additional methods for spell positioning and management
     public void setPosition(float x, float y) {
-        this.x = x;
-        this.y = y;
-        if (currentSprite != null) {
-            currentSprite.setPosition(x, y);
-        }
+        position.x = x;
+        position.y = y;
     }
 
     public float getX() {
-        return x;
+        return position.x;
     }
 
     public float getY() {
-        return y;
+        return position.y;
     }
 
     public void setMaxLifeTime(float maxLifeTime) {
@@ -302,14 +451,17 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
         this.animationSpeed = animationSpeed;
     }
 
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+    }
+
     @Override
     public void cleanup() {
-        // Free any resources if needed
         active = false;
     }
 
     @Override
     public float getZ() {
-        return 50.0f; // Ensure spell is rendered above other elements
+        return position.z;
     }
 }

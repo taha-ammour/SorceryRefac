@@ -3,6 +3,7 @@ package org.example;
 import com.esotericsoftware.kryonet.Client;
 import org.example.engine.*;
 import org.example.game.Player;
+import org.example.game.SpellEntity;
 import org.example.game.SpellSystem;
 import org.example.ui.UIText;
 import org.joml.Vector3f;
@@ -568,9 +569,18 @@ public class GameWorld {
     public void handleSpellCast(Packets.SpellCast spellCast) {
         try {
             UUID playerId = UUID.fromString(spellCast.playerId);
-            spellSystem.castSpell(playerId, spellCast.spellType, spellCast.x, spellCast.y);
+            SpellEntity spellEntity = spellSystem.castSpell(playerId, spellCast.spellType, spellCast.x, spellCast.y);
+
+            if (spellEntity != null) {
+                // Add to scene safely in the next frame
+                addGameObjectNextFrame(spellEntity);
+                System.out.println("✓ Spell entity added to scene: " + spellCast.spellType + " at " + spellCast.x + "," + spellCast.y);
+            } else {
+                System.err.println("× Failed to create spell entity");
+            }
         } catch (Exception e) {
             System.err.println("Error handling spell cast: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

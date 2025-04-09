@@ -3,7 +3,9 @@ package org.example.game;
 import org.example.Packets;
 import org.example.engine.Scene;
 import org.example.engine.SpriteManager;
+import org.example.game.Spells.AbstractSpell;
 import org.example.game.Spells.PlayerSpellBook;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.util.HashMap;
@@ -31,6 +33,9 @@ public class SpellSystem {
         this.spriteManager = spriteManager;
         this.gameScene = gameScene;
         this.spellManager = new SpellManager(spriteManager);
+
+        // Set the game scene in the spell manager
+        this.spellManager.setGameScene(gameScene);
     }
 
     /**
@@ -45,6 +50,9 @@ public class SpellSystem {
             // Initialize player energy and cooldowns
             playerEnergy.put(playerId, maxEnergy);
             playerCooldowns.put(playerId, new HashMap<>());
+
+            // Create player spell book in the spell manager
+            spellManager.createPlayerSpellBook(playerId.toString());
 
             // Add default spells - basic fire spell is added by default in PlayerSpellBook
 
@@ -85,71 +93,41 @@ public class SpellSystem {
     /**
      * Render active spells
      */
-    public void render(org.joml.Matrix4f viewProjectionMatrix) {
+    public void render(Matrix4f viewProjectionMatrix) {
         spellManager.renderSpells(viewProjectionMatrix);
     }
 
     /**
      * Cast a spell for the specified player
      */
-    public boolean castSpell(UUID playerId, String spellType, float x, float y) {
-        // Check for spell book
+    public SpellEntity castSpell(UUID playerId, String spellType, float x, float y) {
+        AbstractSpell spell = null;
         PlayerSpellBook spellBook = playerSpellBooks.get(playerId);
         if (spellBook == null) {
             System.out.println("No spell book for player: " + playerId);
-            return false;
+            return null;
         }
 
-        // Check spell existence
-        if (!spellBook.hasSpell(spellType)) {
-            System.out.println("Player does not have spell: " + spellType);
-            return false;
+        spell = spellBook.getSpell(spellType);
+        if (spell == null) {
+            System.out.println("Player " + playerId + " does not have " + spellType + " spell");
+            return null;
         }
 
-        // Check energy
-        float energyCost = spellBook.getSpell(spellType).getEnergyCost();
-        float currentEnergy = playerEnergy.getOrDefault(playerId, 0f);
-        if (currentEnergy < energyCost) {
-            System.out.println("Not enough energy to cast " + spellType + ". Need " + energyCost + ", have " + currentEnergy);
-            return false;
+        // Convert spell type to SpellEntity.SpellType
+        SpellEntity.SpellType entitySpellType;
+        try {
+            entitySpellType = SpellEntity.SpellType.valueOf(spellType.toUpperCase());
+            System.out.println("Creating spell of type: " + entitySpellType.name());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid spell type: " + spellType);
+            return null;
         }
 
-        // Check cooldown
-        Map<String, Float> cooldowns = playerCooldowns.get(playerId);
-        if (cooldowns != null && cooldowns.containsKey(spellType)) {
-            float remainingCooldown = cooldowns.get(spellType);
-            if (remainingCooldown > 0) {
-                System.out.println(spellType + " on cooldown for " + remainingCooldown + " seconds");
-                return false;
-            }
-        }
-
-        // Cast the spell
-        System.out.println("⚡ Casting " + spellType + " spell at " + x + "," + y);
+        // Use the spellManager to cast the spell instead of directly accessing activeSpells
         SpellEntity spellEntity = spellManager.castSpell(playerId.toString(), spellType, x, y);
 
-        if (spellEntity != null) {
-            System.out.println("✓ Spell entity created successfully");
-
-            // Add to scene - make sure it's added next frame to avoid OpenGL context issues
-            // Use addGameObjectNextFrame to ensure it's added safely
-            gameScene.addGameObject(spellEntity);
-
-            // Deduct energy
-            playerEnergy.put(playerId, currentEnergy - energyCost);
-
-            // Start cooldown
-            double cooldown = spellBook.getSpell(spellType).getCooldown();
-            if (cooldowns != null) {
-                cooldowns.put(spellType, (float)cooldown);
-            }
-
-            return true;
-        } else {
-            System.err.println("× Failed to create spell entity");
-        }
-
-        return false;
+        return spellEntity;
     }
 
     /**
