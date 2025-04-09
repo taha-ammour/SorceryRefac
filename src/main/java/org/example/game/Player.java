@@ -290,6 +290,21 @@ public class Player extends GameObject {
     private void startCasting(String spellType) {
         if (isCasting) return; // Already casting
 
+        // Check if player has this spell
+        try {
+            GameWorld gameWorld = Engine.getGameWorld();
+            if (gameWorld != null) {
+                SpellSystem spellSystem = gameWorld.getSpellSystem();
+                if (spellSystem != null && !spellSystem.playerHasSpell(playerId, spellType)) {
+                    System.out.println("Cannot cast " + spellType + " spell - you don't have it!");
+                    return; // Don't allow casting spells you don't have
+                }
+            }
+        } catch (Exception e) {
+            // If we can't check, assume the player has the spell
+            System.err.println("Error checking spell availability: " + e.getMessage());
+        }
+
         isCasting = true;
         castingTimer = 0f;
         currentCastSpell = spellType;
@@ -299,6 +314,8 @@ public class Player extends GameObject {
 
         System.out.println("Player " + username + " started casting " + spellType + " spell");
     }
+
+    // Modify the completeCasting() method in Player.java
 
     private void completeCasting() {
         if (!isCasting || currentCastSpell == null) return;
@@ -332,16 +349,23 @@ public class Player extends GameObject {
         float spellX = position.x + offsetX;
         float spellY = position.y + offsetY;
 
-        // Get current game world and spell system
+        boolean spellCreated = false;
+
         try {
             org.example.GameWorld gameWorld = org.example.engine.Engine.getGameWorld();
             if (gameWorld != null) {
-                // Try to cast spell directly through the local spell system
                 SpellSystem spellSystem = gameWorld.getSpellSystem();
                 if (spellSystem != null) {
                     SpellEntity spellEntity = spellSystem.castSpell(playerId, currentCastSpell, spellX, spellY);
                     if (spellEntity != null) {
                         System.out.println("Successfully created local spell entity!");
+
+                        // Direct addition to scene if enabled
+                        if (gameWorld.isDirectSpellAddition()) {
+                            gameWorld.getGameScene().addGameObject(spellEntity);
+                            spellCreated = true;
+                            System.out.println("Directly added spell to scene");
+                        }
                     } else {
                         System.err.println("Failed to create local spell entity!");
                     }
@@ -354,6 +378,15 @@ public class Player extends GameObject {
         } catch (Exception e) {
             System.err.println("Error accessing GameWorld or SpellSystem: " + e.getMessage());
             e.printStackTrace();
+        }
+        if (!spellCreated && currentCastSpell != null) {
+            try {
+                // Create a simple visual effect at the spell position
+                createLocalSpellEffect(spellX, spellY, currentCastSpell);
+                spellCreated = true;
+            } catch (Exception e) {
+                System.err.println("Error creating local spell effect: " + e.getMessage());
+            }
         }
 
         // Also try to send via network as before
@@ -381,6 +414,62 @@ public class Player extends GameObject {
 
         // Reset character appearance
         resetCastAnimation();
+    }
+
+    private void createLocalSpellEffect(float x, float y, String spellType) {
+        // Create a spell sprite directly using the spriteManager
+        int spriteId;
+
+        // Choose sprite based on spell type
+        switch (spellType.toLowerCase()) {
+            case "fire":
+                spriteId = 158; // Fire spell sprite
+                break;
+            case "ice":
+                spriteId = 221; // Ice spell sprite
+                break;
+            case "lightning":
+                spriteId = 223; // Lightning spell sprite
+                break;
+            default:
+                spriteId = 158; // Default to fire
+        }
+
+        try {
+            // Create sprite
+            Sprite spellSprite = spriteManager.getSprite(spriteId);
+            if (spellSprite != null) {
+                // Configure the sprite
+                spellSprite.setPosition(x, y);
+                spellSprite.setZ(10.0f); // High Z value for visibility
+                spellSprite.setScale(3.0f, 3.0f);
+
+                // Apply color based on spell type
+                switch (spellType.toLowerCase()) {
+                    case "fire":
+                        spellSprite.setColor(0xFFFF00, 1.0f); // Orange for fire
+                        break;
+                    case "ice":
+                        spellSprite.setColor(0x00AAFF, 1.0f); // Blue for ice
+                        break;
+                    case "lightning":
+                        spellSprite.setColor(0xFFFF00, 1.0f); // Yellow for lightning
+                        break;
+                }
+
+                // Add to scene if we have access
+                if (character != null && character.getScene() != null) {
+                    character.getScene().addGameObject(spellSprite);
+                    System.out.println("Added local spell effect to scene via character");
+                } else {
+                    // Get scene through a different path if needed
+                    // ...
+                    System.out.println("Could not access scene for local spell effect");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating spell sprite: " + e.getMessage());
+        }
     }
 
     private void resetCastAnimation() {

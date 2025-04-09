@@ -227,9 +227,10 @@ public class Engine {
         return input;
     }
     public void setGameWorld(org.example.GameWorld gameWorld) {
-        this.gameWorld = gameWorld;
+        Engine.gameWorld = gameWorld;
     }
-    public static GameWorld getGameWorld(){
+
+    public static GameWorld getGameWorld() {
         return gameWorld;
     }
 }

@@ -16,6 +16,7 @@ public class LayeredCharacter extends GameObject implements ZOrderProvider {
     private boolean isMoving = false;
     // A direction string used for static layers (e.g. body sprite).
     private String currentDirection = "player_sprite_d"; // default direction
+    private Scene scene;
 
     public LayeredCharacter(SpriteManager manager) {
         this.spriteManager = manager;
@@ -262,6 +263,14 @@ public class LayeredCharacter extends GameObject implements ZOrderProvider {
             }
         }
         return null;
+    }
+
+    public Scene getScene() {
+        return scene;
+    }
+
+    public void setScene(Scene scene) {
+        this.scene = scene;
     }
 
     private static class Layer {

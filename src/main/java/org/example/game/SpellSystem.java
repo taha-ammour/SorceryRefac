@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 public class SpellSystem {
     private final SpriteManager spriteManager;
-    private final Scene gameScene;
+    private Scene gameScene;
     private final SpellManager spellManager;
     private final Map<UUID, PlayerSpellBook> playerSpellBooks = new HashMap<>();
 
@@ -103,15 +103,23 @@ public class SpellSystem {
     public SpellEntity castSpell(UUID playerId, String spellType, float x, float y) {
         AbstractSpell spell = null;
         PlayerSpellBook spellBook = playerSpellBooks.get(playerId);
+
+        // For remote players in multiplayer, create a spellbook if one doesn't exist
         if (spellBook == null) {
-            System.out.println("No spell book for player: " + playerId);
-            return null;
+            // Only create automatic spellbooks for remote players in multiplayer
+            // For local player, this should already exist
+            System.out.println("Creating spell book for player: " + playerId);
+            spellBook = new PlayerSpellBook(playerId.toString());
+            playerSpellBooks.put(playerId, spellBook);
+            playerEnergy.put(playerId, maxEnergy);
+            playerCooldowns.put(playerId, new HashMap<>());
         }
 
+        // Get the spell - don't automatically add it if it doesn't exist
         spell = spellBook.getSpell(spellType);
         if (spell == null) {
             System.out.println("Player " + playerId + " does not have " + spellType + " spell");
-            return null;
+            return null; // Return null instead of adding the spell automatically
         }
 
         // Convert spell type to SpellEntity.SpellType
@@ -124,7 +132,7 @@ public class SpellSystem {
             return null;
         }
 
-        // Use the spellManager to cast the spell instead of directly accessing activeSpells
+        // Use the spellManager to cast the spell
         SpellEntity spellEntity = spellManager.castSpell(playerId.toString(), spellType, x, y);
 
         return spellEntity;
@@ -208,5 +216,23 @@ public class SpellSystem {
     public int getSpellLevel(UUID playerId, String spellType) {
         PlayerSpellBook spellBook = playerSpellBooks.get(playerId);
         return spellBook != null ? spellBook.getSpellLevel(spellType) : 0;
+    }
+
+    public void refreshSceneReference(Scene gameScene) {
+        this.gameScene = gameScene;
+
+        // Also update the spell manager
+        if (spellManager != null) {
+            spellManager.setGameScene(gameScene);
+        }
+    }
+
+    /**
+     * Get player's spell book
+     * @param playerId The UUID of the player
+     * @return The player's spell book, or null if it doesn't exist
+     */
+    public PlayerSpellBook getPlayerSpellBook(UUID playerId) {
+        return playerSpellBooks.get(playerId);
     }
 }

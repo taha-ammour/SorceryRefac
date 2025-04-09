@@ -4,7 +4,9 @@ import com.esotericsoftware.kryonet.Client;
 import org.example.engine.*;
 import org.example.game.Player;
 import org.example.game.SpellEntity;
+import org.example.game.SpellFix;
 import org.example.game.SpellSystem;
+import org.example.game.Spells.PlayerSpellBook;
 import org.example.ui.UIText;
 import org.joml.Vector3f;
 
@@ -23,6 +25,9 @@ public class GameWorld {
     private Input input;
     private Camera camera;
     private SpellSystem spellSystem;
+
+    private boolean directSpellAddition = false;
+
 
 
     // Player management
@@ -84,6 +89,26 @@ public class GameWorld {
 
     public void queueForMainThread(Runnable task) {
         mainThreadTasks.add(task);
+    }
+
+    public SpriteManager getSpriteManager() {
+        return spriteManager;
+    }
+
+
+    public void setDirectSpellAddition(boolean direct) {
+        this.directSpellAddition = direct;
+    }
+
+    public boolean isDirectSpellAddition() {
+        return directSpellAddition;
+    }
+
+    /**
+     * Apply spell rendering fixes
+     */
+    public void fixSpellRendering() {
+        SpellFix.apply(this);
     }
 
     /**
@@ -569,20 +594,90 @@ public class GameWorld {
     public void handleSpellCast(Packets.SpellCast spellCast) {
         try {
             UUID playerId = UUID.fromString(spellCast.playerId);
+
+            // Log the incoming spell cast for debugging
+            System.out.println("Received spell cast: " + spellCast.spellType +
+                    " from player " + playerId + " at " + spellCast.x + "," + spellCast.y);
+
+            // Create the spell entity
             SpellEntity spellEntity = spellSystem.castSpell(playerId, spellCast.spellType, spellCast.x, spellCast.y);
 
             if (spellEntity != null) {
-                // Add to scene safely in the next frame
-                addGameObjectNextFrame(spellEntity);
-                System.out.println("✓ Spell entity added to scene: " + spellCast.spellType + " at " + spellCast.x + "," + spellCast.y);
+                // Important: Add directly to scene rather than queuing
+                gameScene.addGameObject(spellEntity);
+                System.out.println("✓ Spell entity added to scene: " + spellCast.spellType);
+
+                // Ensure spell is visible by setting a large scale
+                spellEntity.setMaxLifeTime(5.0f); // Longer lifetime for visibility
+                spellEntity.setAnimationSpeed(0.15f); // Slower animation so it's more visible
             } else {
                 System.err.println("× Failed to create spell entity");
+
+                // Fallback: Create a basic visual effect at the spell location
+                createFallbackSpellEffect(playerId, spellCast.spellType, spellCast.x, spellCast.y);
             }
         } catch (Exception e) {
             System.err.println("Error handling spell cast: " + e.getMessage());
             e.printStackTrace();
         }
     }
+
+    public void givePlayerSpell(UUID playerId, String spellType) {
+        if (spellSystem != null) {
+            PlayerSpellBook spellBook = spellSystem.getPlayerSpellBook(playerId);
+            if (spellBook != null) {
+                spellBook.addSpell(spellType);
+                System.out.println("Gave " + spellType + " spell to player " + playerId);
+            }
+        }
+    }
+
+    /**
+     * Create a simple fallback visual effect for spells when normal creation fails
+     */
+    private void createFallbackSpellEffect(UUID playerId, String spellType, float x, float y) {
+        try {
+            // Determine sprite ID based on spell type
+            int spriteId;
+            int color;
+
+            switch (spellType.toLowerCase()) {
+                case "fire":
+                    spriteId = 158;
+                    color = 0xFF5500;
+                    break;
+                case "ice":
+                    spriteId = 221;
+                    color = 0x00AAFF;
+                    break;
+                case "lightning":
+                    spriteId = 223;
+                    color = 0xFFFF00;
+                    break;
+                default:
+                    spriteId = 158;
+                    color = 0xFFFFFF;
+            }
+
+            // Create a basic sprite for the effect
+            Sprite effectSprite = spriteManager.getSprite(spriteId);
+            if (effectSprite != null) {
+                // Configure the sprite
+                effectSprite.setPosition(x, y);
+                effectSprite.setZ(100f); // Very high Z to ensure visibility
+                effectSprite.setScale(4.0f, 4.0f);
+                effectSprite.setColor(color, 1.0f);
+
+                // Add directly to scene
+                gameScene.addGameObject(effectSprite);
+
+                System.out.println("Created fallback spell effect for player " + playerId);
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating fallback effect: " + e.getMessage());
+        }
+    }
+
 
     // Handle spell upgrade packets
     public void handleSpellUpgrade(Packets.SpellUpgrade spellUpgrade) {

@@ -1,10 +1,7 @@
 package org.example.game;
 
 import org.example.Packets;
-import org.example.engine.GameObject;
-import org.example.engine.Sprite;
-import org.example.engine.SpriteManager;
-import org.example.engine.ZOrderProvider;
+import org.example.engine.*;
 import org.example.game.Spells.AbstractSpell;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -184,7 +181,9 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
             // Create sprites for each effect
             for (String spriteName : effectSpriteNames) {
                 try {
-                    Sprite effectSprite = spriteManager.getSprite(spriteName);
+                    // Create a new unique spell effect sprite instead of reusing an existing one
+                    Sprite effectSprite = createNewSpellSprite(spriteName);
+
                     if (effectSprite != null) {
                         // Position at spell location
                         effectSprite.setPosition(position.x, position.y);
@@ -201,12 +200,53 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
                     }
                 } catch (Exception e) {
                     // Skip if sprite not found
-                    System.err.println("Effect sprite not found: " + spriteName);
+                    System.err.println("Effect sprite creation failed: " + spriteName + " - " + e.getMessage());
                 }
             }
         } catch (Exception e) {
             System.err.println("Error creating effect sprites: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private Sprite createNewSpellSprite(String baseSpriteName) {
+        try {
+            // Get the template sprite first to extract its properties
+            Sprite templateSprite = spriteManager.getSprite(baseSpriteName);
+            if (templateSprite == null) {
+                System.err.println("Template sprite not found: " + baseSpriteName);
+                return null;
+            }
+
+            // Extract sprite coordinates
+            float u0 = templateSprite.getU0();
+            float v0 = templateSprite.getV0();
+            float u1 = templateSprite.getU1();
+            float v1 = templateSprite.getV1();
+
+            // Create a new Sprite instance using the extracted coordinates
+            // This creates a new sprite that looks the same but doesn't reuse the original
+            SpriteSheet sheet = spriteManager.getSheet("tiles"); // Assuming "tiles" is the sheet with spell sprites
+
+            if (sheet != null) {
+                // Calculate pixel coordinates from normalized coordinates
+                int atlasWidth = sheet.getAtlasWidth();
+                int atlasHeight = sheet.getAtlasHeight();
+                int x = (int)(u0 * atlasWidth);
+                int y = (int)(v0 * atlasHeight);
+                int width = (int)((u1 - u0) * atlasWidth);
+                int height = (int)((v1 - v0) * atlasHeight);
+
+                // Create a new sprite from these coordinates
+                return sheet.getSprite(x, y, width, height, false); // false = don't use cache
+            }
+
+            // Fallback - create a copy of the template sprite
+            return new Sprite(templateSprite);
+        } catch (Exception e) {
+            System.err.println("Error creating new spell sprite: " + e.getMessage());
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -246,6 +286,11 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
     /**
      * Update the current sprite based on animation frame
      */
+    // Replace the updateSprite() method in SpellEntity.java
+
+    /**
+     * Update the current sprite based on animation frame
+     */
     private void updateSprite() {
         try {
             // Get the sprite IDs for the current variation
@@ -259,8 +304,8 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
             int spriteId = frames.get(currentFrame % frames.size());
 
             try {
-                // Create or get sprite
-                Sprite sprite = spriteManager.getSprite(spriteId);
+                // Create a new sprite instance instead of reusing
+                Sprite sprite = createNewSpriteById(spriteId);
 
                 if (sprite != null) {
                     // Update the current sprite
@@ -271,19 +316,65 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
                     currentSprite.setZ(position.z);
 
                     // Make it larger for visibility
-                    currentSprite.setScale(3.0f, 3.0f);
+                    currentSprite.setScale(4.0f, 4.0f); // Increased from 3.0 to 4.0 for better visibility
 
-                    // Apply color based on spell type
-                    applySpellTypeColor(currentSprite);
+                    // Apply color based on spell type with higher intensity
+                    applySpellTypeColorEnhanced(currentSprite);
                 } else {
-                    System.err.println("Failed to get sprite with ID: " + spriteId);
+                    System.err.println("Failed to create new sprite for ID: " + spriteId);
                 }
             } catch (Exception e) {
                 System.err.println("Error updating sprite: " + e.getMessage());
+                e.printStackTrace();
             }
         } catch (Exception e) {
             System.err.println("Error in updateSprite: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private Sprite createNewSpriteById(int spriteId) {
+        try {
+            // First try to get the template sprite
+            Sprite templateSprite = spriteManager.getSprite(spriteId);
+
+            if (templateSprite == null) {
+                // Try fallback sprite IDs if the original fails
+                int[] fallbackIds = {158, 159, 160, 161}; // Common fire spell sprites
+                for (int fallbackId : fallbackIds) {
+                    templateSprite = spriteManager.getSprite(fallbackId);
+                    if (templateSprite != null) break;
+                }
+
+                if (templateSprite == null) {
+                    return null; // Give up if we can't find any template
+                }
+            }
+
+            // Create a fresh copy of the sprite
+            return new Sprite(templateSprite);
+        } catch (Exception e) {
+            System.err.println("Error creating sprite by ID: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Enhanced color application with more vibrant colors and higher alpha
+     */
+    private void applySpellTypeColorEnhanced(Sprite sprite) {
+        if (sprite == null) return;
+
+        switch (spellType) {
+            case FIRE:
+                sprite.setColor(0xFF0000, 1.0f); // Pure red for fire
+                break;
+            case ICE:
+                sprite.setColor(0x00FFFF, 1.0f); // Cyan for ice
+                break;
+            case LIGHTNING:
+                sprite.setColor(0xFFFF00, 1.0f); // Yellow for lightning
+                break;
         }
     }
 

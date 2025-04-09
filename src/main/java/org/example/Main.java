@@ -174,6 +174,8 @@ public class Main {
         GameWorld gameWorld = new GameWorld(scene, spriteManager, engine.getInput(), engine.getCamera());
         gameWorld.setDebug(DEBUG_MODE);
 
+        engine.setGameWorld(gameWorld);
+
         // Set up UI with smaller text scale
         setupUI(engine, gameWorld,spriteManager);
 
@@ -213,6 +215,8 @@ public class Main {
         // Add this to your game initialization
         UUID testPlayerId = UUID.fromString("ee6f5f74-c93a-41fe-83ae-a2113db84dbc");
         gameWorld.addRemotePlayer(testPlayerId, "TestPlayer", "RED", 500, 300);
+
+        gameWorld.fixSpellRendering();
 
         GameWorldObject gameWorldObject = new GameWorldObject(gameWorld);
         scene.addGameObject(gameWorldObject);
