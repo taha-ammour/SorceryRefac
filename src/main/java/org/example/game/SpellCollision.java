@@ -51,6 +51,7 @@ public class SpellCollision implements Collidable {
 
             // Handle spell effect
             handleSpellEffect();
+
         }
     }
 
