@@ -25,10 +25,10 @@ public class GameWorld {
     private Input input;
     private Camera camera;
     private SpellSystem spellSystem;
+    private GameCollisionManager collisionManager;
+
 
     private boolean directSpellAddition = false;
-
-
 
     // Player management
     private Player localPlayer;
@@ -72,6 +72,9 @@ public class GameWorld {
 
         // For debugging, register all defined sprites
         collectRegisteredSprites();
+
+        this.collisionManager = new GameCollisionManager(this, gameScene);
+        this.gameScene.addGameObject(collisionManager);
     }
 
     public void initializeVoiceSystem() {
@@ -262,6 +265,7 @@ public class GameWorld {
         Player.addPlayer(localPlayer);
 
         initializePlayerSpells(playerId);
+        collisionManager.registerPlayer(localPlayer);
 
         return localPlayer;
     }
@@ -323,6 +327,8 @@ public class GameWorld {
 
                 initializePlayerSpells(playerId);
 
+                collisionManager.registerPlayer(newPlayer);
+
                 if (debug) System.out.println("Added player to maps - UUID: " +
                         playerId + ", username: " + username);
             } catch (Exception e) {
@@ -351,6 +357,7 @@ public class GameWorld {
 
                     // Display a message that the player left
                     displayChatMessage("SYSTEM", player.getUsername() + " left the game");
+                    collisionManager.unregisterObject(player);
 
                     if (debug) System.out.println("Player removed successfully: " + playerId);
                 } catch (Exception e) {
@@ -605,6 +612,7 @@ public class GameWorld {
             if (spellEntity != null) {
                 // Important: Add directly to scene rather than queuing
                 gameScene.addGameObject(spellEntity);
+                collisionManager.registerSpell(spellEntity);
                 System.out.println("✓ Spell entity added to scene: " + spellCast.spellType);
 
                 // Ensure spell is visible by setting a large scale

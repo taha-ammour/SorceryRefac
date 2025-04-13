@@ -22,6 +22,8 @@ public class Player extends GameObject {
     private String username;
     private String color;
     private boolean isLocalPlayer;
+    private PlayerCollision collisionHandler;
+
 
     private LayeredCharacter character;
     private final SpriteManager spriteManager;
@@ -114,6 +116,8 @@ public class Player extends GameObject {
         if (isLocalPlayer && client != null && client.isConnected()) {
             sendPositionUpdate();
         }
+
+        this.collisionHandler = new PlayerCollision(this);
     }
 
     // Add a method to complete initialization on the main thread
@@ -522,8 +526,33 @@ public class Player extends GameObject {
             }
         }
 
+        if (collisionHandler != null) {
+            collisionHandler.update(deltaTime);
+        }
         character.setMoving(isMoving);
         character.update(deltaTime);
+    }
+
+    public PlayerCollision getCollisionHandler() {
+        return collisionHandler;
+    }
+
+    public void takeDamage(int amount) {
+        if (!isAlive || (collisionHandler != null && collisionHandler.isImmune())) {
+            return;
+        }
+
+        health = Math.max(0, health - amount);
+
+        // Check if player died
+        if (health <= 0 && isAlive) {
+            setAlive(false);
+            System.out.println("Player " + username + " died!");
+        }
+
+        if (collisionHandler != null) {
+            collisionHandler.setImmune(true);
+        }
     }
 
     private void updateMovement(float deltaTime) {

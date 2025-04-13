@@ -50,6 +50,7 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
     private Vector3f velocity = new Vector3f(0f, 0f, 0f);
     private boolean hasMovement = false;
     private float movementSpeed = 100.0f;
+    private SpellCollision collisionHandler;
 
     /**
      * Spell types with their respective sprite IDs
@@ -108,6 +109,24 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
         }
 
         this.active = true;
+
+        this.collisionHandler = new SpellCollision(this);
+    }
+
+
+
+    public float getMaxLifeTime() {
+        return maxLifeTime;
+    }
+
+
+    public float getAnimationSpeed() {
+        return animationSpeed;
+    }
+
+    // Add a method to get the collision handler
+    public SpellCollision getCollisionHandler() {
+        return collisionHandler;
     }
 
     /**
