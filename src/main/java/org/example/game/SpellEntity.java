@@ -46,6 +46,11 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
     private float scaleTimer = 0f;
     private float scaleSpeed = 3.0f;
 
+    // Spell movement
+    private Vector3f velocity = new Vector3f(0f, 0f, 0f);
+    private boolean hasMovement = false;
+    private float movementSpeed = 100.0f;
+
     /**
      * Spell types with their respective sprite IDs
      */
@@ -286,11 +291,6 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
     /**
      * Update the current sprite based on animation frame
      */
-    // Replace the updateSprite() method in SpellEntity.java
-
-    /**
-     * Update the current sprite based on animation frame
-     */
     private void updateSprite() {
         try {
             // Get the sprite IDs for the current variation
@@ -378,6 +378,41 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
         }
     }
 
+    /**
+     * Set the movement direction of the spell
+     * @param dirX X component of direction
+     * @param dirY Y component of direction
+     */
+    public void setMovementDirection(float dirX, float dirY) {
+        // Normalize the direction
+        float length = (float) Math.sqrt(dirX * dirX + dirY * dirY);
+        if (length > 0.001f) {
+            dirX /= length;
+            dirY /= length;
+            velocity.x = dirX * movementSpeed;
+            velocity.y = dirY * movementSpeed;
+            hasMovement = true;
+        }
+    }
+
+    /**
+     * Set the movement speed of the spell
+     * @param speed Speed in units per second
+     */
+    public void setMovementSpeed(float speed) {
+        this.movementSpeed = speed;
+        if (hasMovement) {
+            // Maintain direction but update speed
+            float length = (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+            if (length > 0.001f) {
+                float dirX = velocity.x / length;
+                float dirY = velocity.y / length;
+                velocity.x = dirX * movementSpeed;
+                velocity.y = dirY * movementSpeed;
+            }
+        }
+    }
+
     @Override
     public void update(float deltaTime) {
         if (!active) return;
@@ -396,6 +431,17 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
 
             // Reset animation timer
             animationTimer = 0f;
+        }
+
+        // Update position for moving spells
+        if (hasMovement) {
+            position.x += velocity.x * deltaTime;
+            position.y += velocity.y * deltaTime;
+
+            // Update current sprite position
+            if (currentSprite != null) {
+                currentSprite.setPosition(position.x, position.y);
+            }
         }
 
         // Update glow and scale effects
@@ -433,15 +479,18 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
             switch (spellType) {
                 case FIRE:
                     // Pulsing red-orange glow for fire
-                    currentSprite.setColor(0xFF2000 + (int)(0x30 * glowFactor), 1.0f);
+                    int fireColor = 0xFF2000 + (int)(0x30 * glowFactor);
+                    currentSprite.setColor(fireColor, 1.0f);
                     break;
                 case ICE:
                     // Pulsing blue glow for ice
-                    currentSprite.setColor(0x0040FF + (int)(0x30 * glowFactor), 1.0f);
+                    int iceColor = 0x0040FF + (int)(0x30 * glowFactor);
+                    currentSprite.setColor(iceColor, 1.0f);
                     break;
                 case LIGHTNING:
                     // Pulsing yellow glow for lightning
-                    currentSprite.setColor(0xFFCC00 + (int)(0x30 * glowFactor), 1.0f);
+                    int lightningColor = 0xFFCC00 + (int)(0x30 * glowFactor);
+                    currentSprite.setColor(lightningColor, 1.0f);
                     break;
             }
         }
@@ -524,6 +573,18 @@ public class SpellEntity extends GameObject implements ZOrderProvider {
     public void setPosition(float x, float y) {
         position.x = x;
         position.y = y;
+
+        // Update current sprite position if it exists
+        if (currentSprite != null) {
+            currentSprite.setPosition(x, y);
+        }
+
+        // Update effect sprites positions
+        for (Sprite effect : effectSprites) {
+            if (effect != null) {
+                effect.setPosition(x, y);
+            }
+        }
     }
 
     public float getX() {

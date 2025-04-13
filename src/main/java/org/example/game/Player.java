@@ -34,6 +34,7 @@ public class Player extends GameObject {
     private float castingDuration = 0.5f; // Half second cast time
     private String currentCastSpell = null;
 
+    private int castTimes = 0;
 
     private boolean facingLeft = false;
     private boolean FlipY = false;
@@ -298,6 +299,12 @@ public class Player extends GameObject {
                 if (spellSystem != null && !spellSystem.playerHasSpell(playerId, spellType)) {
                     System.out.println("Cannot cast " + spellType + " spell - you don't have it!");
                     return; // Don't allow casting spells you don't have
+                }
+                if (spellSystem != null && spellSystem.playerHasSpell(playerId, spellType)) {
+                    castTimes++;
+                    if(castTimes >= spellSystem.getSpellLevel(playerId, spellType)) {
+                        spellSystem.upgradeSpell(playerId, spellType);
+                    }
                 }
             }
         } catch (Exception e) {

@@ -9,10 +9,7 @@ import org.example.game.Spells.PlayerSpellBook;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Helper class to manage spell casting and rendering
@@ -22,6 +19,7 @@ public class SpellManager {
     private final Map<String, PlayerSpellBook> playerSpellBooks;
     private final List<SpellEntity> activeSpells;
     private Scene gameScene;
+    private boolean debug = false;
 
     public SpellManager(SpriteManager spriteManager) {
         this.spriteManager = spriteManager;
@@ -34,6 +32,10 @@ public class SpellManager {
      */
     public void setGameScene(Scene scene) {
         this.gameScene = scene;
+        if (debug) {
+            System.out.println("SpellManager: Game scene set with " +
+                    (scene != null ? "valid scene" : "null scene"));
+        }
     }
 
     /**
@@ -41,6 +43,9 @@ public class SpellManager {
      */
     public void createPlayerSpellBook(String playerId) {
         playerSpellBooks.put(playerId, new PlayerSpellBook(playerId));
+        if (debug) {
+            System.out.println("Created spell book for player: " + playerId);
+        }
     }
 
     /**
@@ -62,21 +67,36 @@ public class SpellManager {
             return null;
         }
 
-        System.out.println("Casting " + spellType + " spell for player " + playerId + " at " + x + "," + y);
+        System.out.println("Casting " + spellType + " spell for player " + playerId +
+                " at " + x + "," + y + ", level " + spell.getLevel());
 
         try {
-            // Create a spell entity with LayeredCharacter for better visibility
+            // Create a spell entity with appropriate configuration
             SpellEntity spellEntity = createSpellEntity(spell, spellType, x, y);
 
             if (spellEntity != null) {
+                // Configure spell movement based on type
+                configureSpellMovement(spellEntity, spellType, playerId);
+
                 // Add to active spells list
                 activeSpells.add(spellEntity);
-                System.out.println("Successfully added spell to active spells. Total active: " + activeSpells.size());
+
+                if (debug) {
+                    System.out.println("Successfully added spell to active spells. Total active: " +
+                            activeSpells.size());
+                }
 
                 // Add to game scene if available (this is crucial!)
                 if (gameScene != null) {
-                    gameScene.addGameObject(spellEntity);
-                    System.out.println("Added spell entity to game scene");
+                    try {
+                        gameScene.addGameObject(spellEntity);
+                        if (debug) {
+                            System.out.println("Added spell entity to game scene successfully");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Failed to add spell to scene: " + e.getMessage());
+                        e.printStackTrace();
+                    }
                 } else {
                     System.err.println("WARNING: Game scene is null, spell will not be rendered!");
                 }
@@ -110,12 +130,21 @@ public class SpellManager {
             // Create the spell entity
             SpellEntity spellEntity = new SpellEntity(spriteManager, spell, entitySpellType, x, y);
 
-            // Configure spell for better visibility
-            spellEntity.setMaxLifeTime(4.0f);        // Longer duration for visibility
-            spellEntity.setAnimationSpeed(0.2f);     // Slower animation for better effect
+            // Configure spell based on level and type
+            float baseDuration = 2.0f;
+            float levelBonus = spell.getLevel() * 0.5f;
+
+            // Longer duration for higher level spells
+            spellEntity.setMaxLifeTime(baseDuration + levelBonus);
+
+            // Slower animation for better visual effect
+            spellEntity.setAnimationSpeed(0.15f);
 
             // Set it to impact variation immediately for better visuals
             spellEntity.setVariation("impact");
+
+            // Set debug mode
+            spellEntity.setDebug(debug);
 
             return spellEntity;
         } catch (Exception e) {
@@ -126,9 +155,72 @@ public class SpellManager {
     }
 
     /**
-     * Alternative method to create a spell with LayeredCharacter
+     * Configure spell movement based on type and player
      */
-    private LayeredCharacter createSpellLayeredCharacter(String spellType, float x, float y) {
+    private void configureSpellMovement(SpellEntity spellEntity, String spellType, String playerIdStr) {
+        Player player = null;
+
+        // Try to find the player
+        try {
+            UUID playerUuid = UUID.fromString(playerIdStr);
+            player = Player.getPlayer(playerUuid);
+        } catch (Exception e) {
+            // Player not found, just use default movement
+        }
+
+        // Default direction and speed values
+        float dirX = 0;
+        float dirY = 0;
+        float speed = 150.0f;
+
+        if (player != null) {
+            // Get direction based on player's facing direction
+            Direction playerDirection = player.getCurrentDirection();
+            switch (playerDirection) {
+                case UP:
+                    dirX = 0;
+                    dirY = -1;
+                    break;
+                case DOWN:
+                    dirX = 0;
+                    dirY = 1;
+                    break;
+                case LEFT:
+                    dirX = -1;
+                    dirY = 0;
+                    break;
+                case RIGHT:
+                    dirX = 1;
+                    dirY = 0;
+                    break;
+            }
+        }
+
+        // Adjust speed based on spell type
+        switch (spellType.toLowerCase()) {
+            case "fire":
+                speed = 200.0f;
+                break;
+            case "ice":
+                speed = 150.0f;
+                break;
+            case "lightning":
+                speed = 300.0f;
+                break;
+        }
+
+        // Set movement properties if we have a valid direction
+        if (Math.abs(dirX) > 0.001f || Math.abs(dirY) > 0.001f) {
+            spellEntity.setMovementDirection(dirX, dirY);
+            spellEntity.setMovementSpeed(speed);
+        }
+    }
+
+    /**
+     * Create a spell effect with LayeredCharacter
+     * Useful as a fallback visualization method
+     */
+    public LayeredCharacter createSpellLayeredCharacter(String spellType, float x, float y) {
         LayeredCharacter spellChar = new LayeredCharacter(spriteManager);
 
         // Choose sprites based on spell type
@@ -173,21 +265,45 @@ public class SpellManager {
 
         // Update all spells
         for (SpellEntity spell : activeSpells) {
-            spell.update(deltaTime);
+            try {
+                spell.update(deltaTime);
 
-            // Check if spell is no longer active
-            if (!spell.isActive()) {
+                // Check if spell is no longer active
+                if (!spell.isActive()) {
+                    spellsToRemove.add(spell);
+
+                    // Remove from scene if possible
+                    if (gameScene != null) {
+                        gameScene.removeGameObject(spell);
+                        if (debug) {
+                            System.out.println("Removed inactive spell from scene");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // If updating fails, mark for removal
+                System.err.println("Error updating spell: " + e.getMessage());
                 spellsToRemove.add(spell);
 
                 // Remove from scene if possible
                 if (gameScene != null) {
-                    gameScene.removeGameObject(spell);
+                    try {
+                        gameScene.removeGameObject(spell);
+                    } catch (Exception ex) {
+                        // Ignore nested exception
+                    }
                 }
             }
         }
 
         // Remove inactive spells from tracking list
-        activeSpells.removeAll(spellsToRemove);
+        if (!spellsToRemove.isEmpty()) {
+            activeSpells.removeAll(spellsToRemove);
+            if (debug) {
+                System.out.println("Removed " + spellsToRemove.size() +
+                        " inactive spells. Remaining: " + activeSpells.size());
+            }
+        }
     }
 
     /**
@@ -209,7 +325,16 @@ public class SpellManager {
     public void upgradeSpell(String playerId, String spellType) {
         PlayerSpellBook spellBook = playerSpellBooks.get(playerId);
         if (spellBook != null) {
-            spellBook.upgradeSpell(spellType);
+            try {
+                spellBook.upgradeSpell(spellType);
+                if (debug) {
+                    System.out.println("Upgraded " + spellType + " spell for player " + playerId);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to upgrade spell: " + e.getMessage());
+            }
+        } else {
+            System.out.println("No spell book found for player: " + playerId);
         }
     }
 
@@ -234,11 +359,25 @@ public class SpellManager {
         // Remove from scene if possible
         if (gameScene != null) {
             for (SpellEntity spell : activeSpells) {
-                gameScene.removeGameObject(spell);
+                try {
+                    gameScene.removeGameObject(spell);
+                } catch (Exception e) {
+                    System.err.println("Error removing spell from scene: " + e.getMessage());
+                }
             }
         }
 
         // Clear the list
         activeSpells.clear();
+        if (debug) {
+            System.out.println("Cleared all active spells");
+        }
+    }
+
+    /**
+     * Set debug mode
+     */
+    public void setDebug(boolean debug) {
+        this.debug = debug;
     }
 }

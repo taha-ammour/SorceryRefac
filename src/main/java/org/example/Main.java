@@ -192,6 +192,12 @@ public class Main {
 
         // Add lights to the scene
         setupLights(scene);
+        // Add particle effects to make the scene more lively
+        ParticleSystemDemo.addParticleEffectsToScene(scene, spriteManager);
+        ParticleSystemDemo.addPlayerTrail(localPlayer, scene, spriteManager);
+
+        // Create a ring of particles at a point of interest
+        ParticleSystemDemo.createParticleRing(scene, spriteManager, 400, 300, 150, 8);
 
         // Draw all registered sprites in debug mode
         if (DEBUG_MODE) {
@@ -411,6 +417,23 @@ public class Main {
         // Add debug info text
         UIText debugTitle = new UIText(fontSheet, fontShader, "DEBUG MODE - All Registered Sprites", 10, 10);
         uiManager.addComponent(debugTitle, true);
+
+        UIParticleIntegration.UIParticleButton fancyButton = new UIParticleIntegration.UIParticleButton(
+                100, 100, 200, 50,
+                "button_up_1", "Click Me",
+                fontSheet, fontShader,
+                spriteManager, engine.getInput(), scene
+        );
+
+        // Example: Create a particle-enhanced text element
+        UIParticleIntegration.UIParticleText fancyText = new UIParticleIntegration.UIParticleText(
+                fontSheet, fontShader, "Fancy Text",
+                300, 200, spriteManager, scene
+        );
+
+        // Add to UI manager
+        uiManager.addComponent(fancyButton, true);
+        uiManager.addComponent(fancyText, true);
 
         // Create debug panels
         UIPanel mainPanel = new UIPanel(0, 40, 1024, 728);

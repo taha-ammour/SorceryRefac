@@ -1,6 +1,7 @@
 package org.example.engine;
 
 import org.joml.Matrix4f;
+import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryStack;
@@ -94,6 +95,10 @@ public class Sprite extends GameObject implements ZOrderProvider  {
 
     public void setFlipX(boolean flipX) {
         FlipX = flipX;
+    }
+
+    public Vector2f getPosition(){
+        return new Vector2f(x, y);
     }
 
     private static class GeometryData {
@@ -464,4 +469,8 @@ public class Sprite extends GameObject implements ZOrderProvider  {
     public float getU1() { return u1; }
     public float getV0() { return v0; }
     public float getV1() { return v1; }
+
+    public int getColor() {
+        return color;
+    }
 }
